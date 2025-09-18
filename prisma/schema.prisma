@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -14,9 +14,9 @@ model Note {
   id            String   @id @default(cuid())
   slug          String   @unique
   content       String   @default("")
-  contentRich   String?  // TipTap JSON content
+  contentRich   String? // TipTap JSON content
   contentFormat String   @default("plain") // "plain" | "rich"
-  secret        String?  // if set, required to write/update/upload
+  secret        String? // if set, required to write/update/upload
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   images        Image[]
@@ -26,7 +26,7 @@ model Image {
   id        String   @id @default(cuid())
   noteId    String
   note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  path      String   // served under /i/[filename]
+  path      String // served under /i/[filename]
   mime      String
   width     Int?
   height    Int?

@@ -7,10 +7,15 @@ services:
       - '3000:3000'
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/notepad
-      - NODE_ENV=production
+      - NODE_ENV=development
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      # Mount source code for development (optional)
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     restart: unless-stopped
 
   db:
@@ -20,7 +25,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_dev_data:/var/lib/postgresql/data
     ports:
       - '5432:5432'
     healthcheck:
@@ -30,5 +35,17 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '8080:80'
+    depends_on:
+      - db
+    restart: unless-stopped
+
 volumes:
-  postgres_data:
+  postgres_dev_data:

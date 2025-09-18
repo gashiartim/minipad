@@ -39,11 +39,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Copy Prisma files
+# Copy Prisma files (the standalone build should already include the generated client)
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Create uploads directory
+# Create uploads directory for images
 RUN mkdir -p data/uploads && chown -R nextjs:nodejs data
 
 USER nextjs
