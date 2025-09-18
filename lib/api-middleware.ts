@@ -7,13 +7,19 @@ export interface ApiError {
 }
 
 export function createErrorResponse(message: string, code: string, status: number): Response {
-  const response = Response.json({ error: message, code } as ApiError, { status })
+  const response = new Response(JSON.stringify({ error: message, code } as ApiError), { 
+    status,
+    headers: { "Content-Type": "application/json" }
+  })
   addSecurityHeaders(response)
   return response
 }
 
 export function createSuccessResponse(data: any, status = 200): Response {
-  const response = Response.json(data, { status })
+  const response = new Response(JSON.stringify(data), { 
+    status,
+    headers: { "Content-Type": "application/json" }
+  })
   addSecurityHeaders(response)
   return response
 }

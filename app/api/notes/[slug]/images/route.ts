@@ -3,8 +3,8 @@ import { writeFile } from "fs/promises"
 import path from "path"
 import { prisma } from "@/lib/db"
 import { slugSchema, allowedImageTypes, maxImageSize } from "@/lib/validators"
-import { createErrorResponse, createSuccessResponse, logRequest, logError } from "@/lib/api-middleware"
-import { ensureUploadsDir, generateImageFilename } from "@/lib/utils"
+import { createErrorResponse, createSuccessResponse, checkRateLimit, logRequest, logError } from "@/lib/api-middleware"
+import { ensureUploadsDir, generateImageFilename } from "@/lib/server-utils"
 
 interface RouteParams {
   params: Promise<{ slug: string }>
@@ -15,6 +15,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   try {
     const { slug } = await params
+
+    // Check rate limit first
+    const rateLimitResult = checkRateLimit(request)
+    if (!rateLimitResult.allowed) {
+      logRequest(request, 429, startTime)
+      return rateLimitResult.response!
+    }
 
     // Validate slug
     const slugValidation = slugSchema.safeParse(slug)

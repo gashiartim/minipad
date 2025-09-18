@@ -19,13 +19,22 @@ export const createNoteSchema = z.object({
   secret: secretSchema,
 })
 
+export const contentFormatSchema = z.enum(["plain", "rich"])
+
 export const updateNoteSchema = z.object({
   content: contentSchema.optional(),
+  contentRich: z.string().max(500_000, "Rich content too long").optional(),
+  contentFormat: contentFormatSchema.optional(),
   secret: secretSchema,
 })
 
 export const imageUploadSchema = z.object({
   secret: secretSchema,
+  file: z
+    .instanceof(File)
+    .refine((file) => allowedImageTypes.includes(file.type as any), "Invalid file type")
+    .refine((file) => file.size <= maxImageSize, "File too large")
+    .refine((file) => file.size > 0, "File is empty"),
 })
 
 export const allowedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"] as const
@@ -37,11 +46,11 @@ export function generateSlug(): string {
   let result = ""
 
   // Use crypto for better randomness if available
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+  if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.getRandomValues) {
     const array = new Uint8Array(8)
-    crypto.getRandomValues(array)
+    globalThis.crypto.getRandomValues(array)
     for (let i = 0; i < 8; i++) {
-      result += chars.charAt(array[i] % chars.length)
+      result += chars.charAt((array[i] || 0) % chars.length)
     }
   } else {
     // Fallback to Math.random
@@ -58,13 +67,14 @@ export function sanitizeContent(content: string): string {
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "") // Remove script tags
     .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "") // Remove iframe tags
     .replace(/javascript:/gi, "") // Remove javascript: protocols
-    .replace(/on\w+\s*=/gi, "") // Remove event handlers
+    .replace(/\son\w+\s*=\s*['""][^'"]*['"]/gi, "") // Remove event handlers with values
+    .replace(/\son\w+\s*=\s*[^'"\s]+/gi, "") // Remove event handlers without quotes
     .trim()
 }
 
 export function sanitizeInput(input: string): string {
   return input
-    .replace(/[<>]/g, "") // Remove potential HTML tags
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
     .trim()
 }
 

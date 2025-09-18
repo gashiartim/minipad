@@ -11,13 +11,15 @@ datasource db {
 }
 
 model Note {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  content   String   @default("")
-  secret    String?  // if set, required to write/update/upload
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  images    Image[]
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  content       String   @default("")
+  contentRich   String?  // TipTap JSON content
+  contentFormat String   @default("plain") // "plain" | "rich"
+  secret        String?  // if set, required to write/update/upload
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  images        Image[]
 }
 
 model Image {

@@ -50,7 +50,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
               <div className="p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <Badge variant="secondary" className="text-xs">
-                    {image.mime.split("/")[1].toUpperCase()}
+                    {image.mime.split("/")[1]?.toUpperCase() || "UNKNOWN"}
                   </Badge>
                   <span className="text-xs text-muted-foreground">{formatFileSize(image.sizeBytes)}</span>
                 </div>

@@ -5,6 +5,7 @@ import {
   createErrorResponse,
   createSuccessResponse,
   validateRequestSize,
+  checkRateLimit,
   logRequest,
   logError,
 } from "@/lib/api-middleware"
@@ -13,6 +14,13 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
   try {
+    // Check rate limit first
+    const rateLimitResult = checkRateLimit(request)
+    if (!rateLimitResult.allowed) {
+      logRequest(request, 429, startTime)
+      return rateLimitResult.response!
+    }
+
     if (!validateRequestSize(request)) {
       logRequest(request, 413, startTime)
       return createErrorResponse("Request too large", "REQUEST_TOO_LARGE", 413)
@@ -44,7 +52,7 @@ export async function POST(request: NextRequest) {
       data: {
         slug,
         content: content || "",
-        secret,
+        secret: secret || null,
       },
     })
 

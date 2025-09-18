@@ -1,10 +1,10 @@
 /** @type {import('eslint').Linter.Config} */
-module.exports = {
+const config = {
   extends: ["next/core-web-vitals", "next/typescript"],
   rules: {
-    "@typescript-eslint/no-unused-vars": "error",
-    "@typescript-eslint/no-explicit-any": "warn",
     "prefer-const": "error",
     "no-var": "error",
   },
 }
+
+module.exports = config

@@ -26,7 +26,9 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
     if (!files || files.length === 0) return
 
     const file = files[0]
-    uploadFile(file)
+    if (file) {
+      uploadFile(file)
+    }
   }
 
   const uploadFile = async (file: File) => {
@@ -44,8 +46,18 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
     // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
-        title: "File too large",
+        title: "File too large", 
         description: "Please upload images smaller than 10MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate file is not empty
+    if (file.size === 0) {
+      toast({
+        title: "Empty file",
+        description: "Please select a valid image file",
         variant: "destructive",
       })
       return
@@ -76,9 +88,23 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
       const data = await response.json()
 
       if (!response.ok) {
+        let description = "Failed to upload image"
+        
+        if (response.status === 403) {
+          description = "Access denied - check your secret"
+        } else if (response.status === 413) {
+          description = "File too large"
+        } else if (response.status === 415) {
+          description = "Invalid file type"
+        } else if (response.status === 429) {
+          description = "Too many requests - please wait"
+        } else if (data.error) {
+          description = data.error
+        }
+        
         toast({
           title: "Upload failed",
-          description: data.error || "Failed to upload image",
+          description,
           variant: "destructive",
         })
         return

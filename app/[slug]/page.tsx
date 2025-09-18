@@ -3,20 +3,24 @@
 import { useState, useEffect, useCallback, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
+import { useRealtimeNote } from "@/hooks/use-realtime-note"
 import { ImageUpload } from "@/components/image-upload"
 import { ImageGallery } from "@/components/image-gallery"
-import { Save, Home, Clock, Calendar, ImageIcon } from "lucide-react"
+import { NoteLogin } from "@/components/note-login"
+import { RichTextEditor } from "@/components/rich-text-editor"
+import { Save, Home, Clock, Calendar, ImageIcon, Type, FileText } from "lucide-react"
 
 interface Note {
   id: string
   slug: string
   content: string
+  contentRich?: string
+  contentFormat: "plain" | "rich"
   createdAt: string
   updatedAt: string
   images: Array<{
@@ -38,18 +42,78 @@ export default function NotePage({ params }: PageProps) {
   const { slug } = use(params)
   const [note, setNote] = useState<Note | null>(null)
   const [content, setContent] = useState("")
+  const [contentRich, setContentRich] = useState("")
+  const [contentFormat, setContentFormat] = useState<"plain" | "rich">("plain")
   const [secret, setSecret] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [autosaveEnabled, setAutosaveEnabled] = useState(true)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authError, setAuthError] = useState("")
+  const [needsAuth, setNeedsAuth] = useState(false)
+  const [localContent, setLocalContent] = useState("")
+  const [isUpdatingFromRemote, setIsUpdatingFromRemote] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
-  const fetchNote = useCallback(async () => {
+  // Real-time synchronization
+  const { isConnected: isRealtimeConnected } = useRealtimeNote({
+    slug,
+    secret,
+    enabled: isAuthenticated,
+    onUpdate: useCallback((update) => {
+      if (update.type === "content_update") {
+        // Check for conflicts: if user has unsaved changes when remote update arrives
+        const currentContent = contentFormat === "rich" ? contentRich : content
+        const updateContent = update.contentFormat === "rich" ? update.contentRich : update.content
+        
+        if (hasUnsavedChanges && currentContent !== updateContent) {
+          toast({
+            title: "Content updated by another user",
+            description: "Your changes will be preserved. Save to overwrite or refresh to discard.",
+            variant: "default",
+          })
+          return // Don't overwrite local changes
+        }
+        
+        setIsUpdatingFromRemote(true)
+        
+        // Update content based on format
+        if (update.contentFormat === "rich" && update.contentRich !== undefined) {
+          setContentRich(update.contentRich)
+          setContentFormat("rich")
+        }
+        if (update.content !== undefined) {
+          setContent(update.content)
+          setLocalContent(update.content)
+        }
+        if (update.contentFormat !== undefined) {
+          setContentFormat(update.contentFormat)
+        }
+        
+        setNote((prev) => prev ? { 
+          ...prev, 
+          content: update.content || prev.content,
+          contentRich: update.contentRich || prev.contentRich,
+          contentFormat: update.contentFormat || prev.contentFormat,
+          updatedAt: update.updatedAt || prev.updatedAt 
+        } : null)
+        setHasUnsavedChanges(false)
+        setTimeout(() => setIsUpdatingFromRemote(false), 500)
+      }
+    }, [hasUnsavedChanges, content, contentRich, contentFormat, toast])
+  })
+
+  const fetchNote = useCallback(async (providedSecret?: string) => {
     try {
-      const response = await fetch(`/api/notes/${slug}`)
+      const url = new URL(`/api/notes/${slug}`, window.location.origin)
+      if (providedSecret) {
+        url.searchParams.set("secret", providedSecret)
+      }
+      
+      const response = await fetch(url.toString())
 
       if (response.status === 404) {
         toast({
@@ -61,6 +125,13 @@ export default function NotePage({ params }: PageProps) {
         return
       }
 
+      if (response.status === 401) {
+        setNeedsAuth(true)
+        setIsAuthenticated(false)
+        setIsLoading(false)
+        return
+      }
+
       if (!response.ok) {
         throw new Error("Failed to fetch note")
       }
@@ -68,6 +139,16 @@ export default function NotePage({ params }: PageProps) {
       const noteData = await response.json()
       setNote(noteData)
       setContent(noteData.content)
+      setContentRich(noteData.contentRich || "")
+      setContentFormat(noteData.contentFormat || "plain")
+      setLocalContent(noteData.content)
+      setIsAuthenticated(true)
+      setNeedsAuth(false)
+      setAuthError("")
+      
+      if (providedSecret) {
+        setSecret(providedSecret)
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -79,23 +160,67 @@ export default function NotePage({ params }: PageProps) {
     }
   }, [slug, router, toast])
 
-  const saveNote = useCallback(async () => {
-    if (!note || isSaving) return
-
-    setIsSaving(true)
+  const handleAuth = useCallback(async (providedSecret: string) => {
+    setAuthError("")
+    setIsLoading(true)
+    
     try {
+      await fetchNote(providedSecret)
+    } catch (error) {
+      setAuthError("Invalid secret. Please try again.")
+      setIsLoading(false)
+    }
+  }, [fetchNote])
+
+  const saveNote = useCallback(async () => {
+    if (!note || isSaving || !isAuthenticated) return
+
+    // Capture current content for optimistic update
+    const contentToSave = content
+    const contentRichToSave = contentRich
+    const contentFormatToSave = contentFormat
+    
+    setIsSaving(true)
+    // Optimistic update
+    setHasUnsavedChanges(false)
+    setLastSaved(new Date())
+    
+    try {
+      const requestBody: any = {
+        secret: secret || undefined,
+      }
+      
+      if (contentFormatToSave === "rich") {
+        requestBody.contentRich = contentRichToSave
+        requestBody.contentFormat = "rich"
+        // Also save plain text version for fallback
+        requestBody.content = contentToSave
+      } else {
+        requestBody.content = contentToSave
+        requestBody.contentFormat = "plain"
+      }
+      
       const response = await fetch(`/api/notes/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content,
-          secret: secret || undefined,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setHasUnsavedChanges(content !== note.content)
+        setLastSaved(null)
+        
+        // If authentication fails, show login screen again
+        if (response.status === 403) {
+          setIsAuthenticated(false)
+          setNeedsAuth(true)
+          setAuthError("Secret expired or invalid. Please re-authenticate.")
+          return
+        }
+        
         toast({
           title: "Error",
           description: data.error || "Failed to save note",
@@ -104,14 +229,28 @@ export default function NotePage({ params }: PageProps) {
         return
       }
 
-      setNote((prev) => (prev ? { ...prev, content, updatedAt: data.updatedAt } : null))
-      setHasUnsavedChanges(false)
-      setLastSaved(new Date())
-      toast({
-        title: "Saved",
-        description: "Note saved successfully",
-      })
+      // Update with server response
+      setNote((prev) => (prev ? { 
+        ...prev, 
+        content: contentToSave,
+        contentRich: contentRichToSave,
+        contentFormat: contentFormatToSave,
+        updatedAt: data.updatedAt 
+      } : null))
+      setLocalContent(contentToSave)
+      
+      // Only show success toast if we're not in the middle of real-time updates
+      if (!isUpdatingFromRemote) {
+        toast({
+          title: "Saved",
+          description: "Note saved successfully",
+        })
+      }
     } catch (error) {
+      // Revert optimistic update
+      setHasUnsavedChanges(content !== note.content)
+      setLastSaved(null)
+      
       toast({
         title: "Error",
         description: "Failed to save note",
@@ -120,7 +259,7 @@ export default function NotePage({ params }: PageProps) {
     } finally {
       setIsSaving(false)
     }
-  }, [note, content, secret, slug, toast, isSaving])
+  }, [note, content, contentRich, contentFormat, secret, slug, toast, isSaving, isAuthenticated, isUpdatingFromRemote])
 
   // Auto-save with debounce
   useEffect(() => {
@@ -131,7 +270,7 @@ export default function NotePage({ params }: PageProps) {
     }, 1500)
 
     return () => clearTimeout(timer)
-  }, [content, hasUnsavedChanges, autosaveEnabled, saveNote, note])
+  }, [content, contentRich, hasUnsavedChanges, autosaveEnabled, saveNote, note])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -151,8 +290,33 @@ export default function NotePage({ params }: PageProps) {
   }, [fetchNote])
 
   const handleContentChange = (value: string) => {
+    // Don't mark as unsaved if this is from a remote update
+    if (isUpdatingFromRemote) return
+    
     setContent(value)
+    setLocalContent(value)
     setHasUnsavedChanges(true)
+  }
+
+  const handleRichContentChange = (value: string) => {
+    // Don't mark as unsaved if this is from a remote update
+    if (isUpdatingFromRemote) return
+    
+    setContentRich(value)
+    setContentFormat("rich")
+    setHasUnsavedChanges(true)
+  }
+
+  const switchToRichEditor = () => {
+    setContentFormat("rich")
+    // Convert plain text to basic HTML if needed
+    if (!contentRich && content) {
+      setContentRich(`<p>${content.replace(/\n/g, '</p><p>')}</p>`)
+    }
+  }
+
+  const switchToPlainEditor = () => {
+    setContentFormat("plain")
   }
 
   const handleImageUploaded = (image: any) => {
@@ -163,6 +327,18 @@ export default function NotePage({ params }: PageProps) {
             images: [...prev.images, image],
           }
         : null,
+    )
+  }
+
+  // Show login screen if authentication is needed
+  if (needsAuth && !isAuthenticated) {
+    return (
+      <NoteLogin 
+        slug={slug}
+        onAuth={handleAuth}
+        isLoading={isLoading}
+        error={authError}
+      />
     )
   }
 
@@ -250,6 +426,24 @@ export default function NotePage({ params }: PageProps) {
             <div className="flex items-center justify-between">
               <CardTitle>Content</CardTitle>
               <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={contentFormat === "plain" ? "default" : "outline"}
+                    size="sm"
+                    onClick={switchToPlainEditor}
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    Plain
+                  </Button>
+                  <Button
+                    variant={contentFormat === "rich" ? "default" : "outline"}
+                    size="sm"
+                    onClick={switchToRichEditor}
+                  >
+                    <Type className="h-4 w-4 mr-1" />
+                    Rich
+                  </Button>
+                </div>
                 <Label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -271,32 +465,42 @@ export default function NotePage({ params }: PageProps) {
                     <span className="text-xs text-blue-500">Saving...</span>
                   </div>
                 )}
+                {isUpdatingFromRemote && (
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-green-500">Sync update</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${isRealtimeConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <span className="text-xs text-muted-foreground">
+                    {isRealtimeConnected ? 'Live' : 'Offline'}
+                  </span>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              placeholder="Start writing your note..."
-              className="min-h-[300px] resize-y font-mono text-sm leading-relaxed"
-            />
+            {contentFormat === "rich" ? (
+              <RichTextEditor
+                content={contentRich}
+                onUpdate={handleRichContentChange}
+                placeholder="Start writing your note..."
+                slug={slug}
+                secret={secret}
+                className="min-h-[300px]"
+              />
+            ) : (
+              <Textarea
+                value={content}
+                onChange={(e) => handleContentChange(e.target.value)}
+                placeholder="Start writing your note..."
+                className="min-h-[300px] resize-y font-mono text-sm leading-relaxed"
+              />
+            )}
 
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <Label htmlFor="secret" className="text-sm">
-                  Secret (if note is protected)
-                </Label>
-                <Input
-                  id="secret"
-                  type="password"
-                  value={secret}
-                  onChange={(e) => setSecret(e.target.value)}
-                  placeholder="Enter secret to save"
-                  className="mt-1"
-                />
-              </div>
-              <Button onClick={saveNote} disabled={isSaving} className="mt-6">
+            <div className="flex justify-end">
+              <Button onClick={saveNote} disabled={isSaving}>
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? "Saving..." : "Save"}
               </Button>
@@ -304,6 +508,7 @@ export default function NotePage({ params }: PageProps) {
 
             <p className="text-xs text-muted-foreground text-pretty">
               Press Ctrl/Cmd+S to save • Auto-save after 1.5s of inactivity
+              {contentFormat === "rich" && " • Paste images directly in rich editor"}
             </p>
           </CardContent>
         </Card>

@@ -1,7 +1,4 @@
-"use client"
-
 import "@testing-library/jest-dom"
-import jest from "jest"
 
 // Mock Next.js router
 jest.mock("next/navigation", () => ({
@@ -44,12 +41,14 @@ jest.mock("@/lib/db", () => ({
     note: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
     image: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       findMany: jest.fn(),
       delete: jest.fn(),
     },

@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { ImageUpload } from "@/components/image-upload"
-import jest from "jest" // Import jest to declare it
 
 // Mock the toast hook
 jest.mock("@/hooks/use-toast", () => ({

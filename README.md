@@ -1,16 +1,25 @@
-# Local Notepad - Production Ready
+# Local Notepad - Real-Time Collaborative
 
-A robust, secure, local-only web application for creating and managing text notes with image attachments. Built with enterprise-grade features including comprehensive testing, security hardening, and operational tooling.
+A robust, secure, local-only web application for creating and managing text notes with image attachments and **real-time collaboration**. Built with enterprise-grade features including comprehensive testing, security hardening, and live synchronization across multiple browser sessions.
 
 ## Features
 
 ### Core Features
 - **Local-only**: No external services, runs entirely on your local network
+- **🔥 Real-time collaboration**: Live synchronization across multiple browser sessions
 - **Simple notes**: Create notes with slugs, optional password protection
 - **Image support**: Upload and attach images (PNG, JPEG, WebP, GIF)
 - **Auto-save**: Automatic saving with debounce and visual feedback
 - **Keyboard shortcuts**: Ctrl/Cmd+S to save, Ctrl/Cmd+Enter to create
 - **Responsive design**: Works on desktop and mobile with skeleton loading
+
+### Real-Time Features
+- **Live synchronization**: Changes appear instantly across all open sessions
+- **Connection status**: Visual indicators for online/offline state
+- **Conflict resolution**: Smart handling of simultaneous edits
+- **Optimistic updates**: Instant feedback with server confirmation
+- **Auto-reconnection**: Robust connection management with exponential backoff
+- **Protected sessions**: Real-time sync respects note authentication
 
 ### Production Features
 - **TypeScript strict mode**: Full type safety and compile-time error checking
@@ -24,6 +33,7 @@ A robust, secure, local-only web application for creating and managing text note
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router) with TypeScript strict mode
+- **Real-time**: Server-Sent Events (SSE) with automatic reconnection
 - **Styling**: Tailwind CSS v4 with shadcn/ui components
 - **Database**: Prisma ORM with SQLite
 - **Testing**: Jest + Testing Library + Playwright
@@ -63,9 +73,11 @@ A robust, secure, local-only web application for creating and managing text note
 ### Editing Notes
 - Open a note by slug or create new one
 - Edit content in the textarea (supports up to 200,000 characters)
+- **Real-time sync**: Changes appear live in other browser windows
 - Auto-save enabled by default (1.5s delay after typing stops)
 - Manual save with Ctrl/Cmd+S or the Save button
-- Visual indicators for unsaved changes and save status
+- Visual indicators for connection status, unsaved changes, and sync updates
+- **Conflict protection**: Your changes won't be overwritten by remote updates
 
 ### Image Management
 - Drag and drop images onto the upload area with visual feedback
@@ -76,12 +88,14 @@ A robust, secure, local-only web application for creating and managing text note
 - Click images to open in new tab
 
 ### Security Features
-- Notes can be protected with a secret (6-128 characters)
-- Secret required for editing and uploading images to protected notes
+- **Protected access**: Notes can be protected with a secret (6-128 characters)
+- **Login screen**: Dedicated authentication flow for protected notes
+- **Session management**: Secrets stored securely in browser session
 - Rate limiting: 60 requests per 5 minutes per IP address
 - Content sanitization removes scripts, iframes, and event handlers
 - Path traversal protection and filename validation
 - Security headers prevent XSS, clickjacking, and other attacks
+- **Real-time security**: Live sync respects note authentication
 
 ## Development Scripts
 
@@ -124,14 +138,19 @@ npm run stats        # Show database statistics
 /app
   /(public)/i/[file]/route.ts    # Secure image serving with validation
   /api/notes/route.ts            # Create notes with rate limiting
-  /api/notes/[slug]/route.ts     # Get/update notes with mutex locks
+  /api/notes/[slug]/route.ts     # Get/update notes with real-time broadcasting
+  /api/notes/[slug]/events/route.ts # Server-Sent Events for real-time sync
   /api/notes/[slug]/images/route.ts # Image upload with validation
-  /[slug]/page.tsx               # Note editor with enhanced UX
+  /[slug]/page.tsx               # Note editor with real-time collaboration
   /page.tsx                      # Homepage with improved design
 /components
   /ui/                           # shadcn/ui components + custom additions
   /image-upload.tsx              # Enhanced drag-and-drop upload
   /image-gallery.tsx             # Image gallery with metadata
+  /note-login.tsx                # Protected note authentication component
+/hooks
+  /use-realtime-note.ts          # Real-time synchronization hook
+  /use-toast.ts                  # Toast notification system
 /lib
   /db.ts                         # Database connection
   /validators.ts                 # Enhanced Zod schemas with sanitization
