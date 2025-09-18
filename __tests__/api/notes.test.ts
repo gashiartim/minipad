@@ -1,0 +1,105 @@
+import { NextRequest } from "next/server"
+import { POST } from "@/app/api/notes/route"
+import { prisma } from "@/lib/db"
+import jest from "jest"
+
+// Mock the database
+jest.mock("@/lib/db")
+const mockPrisma = prisma as jest.Mocked<typeof prisma>
+
+describe("/api/notes", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    // Reset fetch mock
+    ;(global.fetch as jest.Mock).mockClear()
+  })
+
+  describe("POST", () => {
+    it("should create a note with generated slug", async () => {
+      const mockNote = {
+        id: "1",
+        slug: "generated-slug",
+        content: "",
+        secret: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      mockPrisma.note.create.mockResolvedValue(mockNote)
+
+      const request = new NextRequest("http://localhost:3000/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(201)
+      expect(data.slug).toBe("generated-slug")
+      expect(mockPrisma.note.create).toHaveBeenCalled()
+    })
+
+    it("should create a note with provided slug", async () => {
+      const mockNote = {
+        id: "1",
+        slug: "my-note",
+        content: "Hello world",
+        secret: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      mockPrisma.note.create.mockResolvedValue(mockNote)
+
+      const request = new NextRequest("http://localhost:3000/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: "my-note",
+          content: "Hello world",
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(201)
+      expect(data.slug).toBe("my-note")
+    })
+
+    it("should handle duplicate slug error", async () => {
+      mockPrisma.note.create.mockRejectedValue({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      })
+
+      const request = new NextRequest("http://localhost:3000/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: "existing-slug" }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(409)
+      expect(data.error).toBe("A note with this slug already exists")
+    })
+
+    it("should validate request body", async () => {
+      const request = new NextRequest("http://localhost:3000/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: "ab" }), // too short
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain("Invalid slug format")
+    })
+  })
+})

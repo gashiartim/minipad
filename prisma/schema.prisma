@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./data/app.db"
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  content   String   @default("")
+  secret    String?  // if set, required to write/update/upload
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  images    Image[]
+}
+
+model Image {
+  id        String   @id @default(cuid())
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  path      String   // served under /i/[filename]
+  mime      String
+  width     Int?
+  height    Int?
+  sizeBytes Int
+  createdAt DateTime @default(now())
+}
