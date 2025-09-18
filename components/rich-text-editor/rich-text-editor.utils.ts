@@ -3,7 +3,11 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Image from '@tiptap/extension-image'
 
 // Custom image upload function
-export async function uploadImageFromPaste(file: File, slug: string, secret?: string) {
+export async function uploadImageFromPaste(
+  file: File,
+  slug: string,
+  secret?: string
+) {
   const formData = new FormData()
   formData.append('file', file)
   if (secret) {
@@ -42,7 +46,7 @@ export async function copyImageToClipboard(imageSrc: string) {
   try {
     const response = await fetch(imageSrc)
     const blob = await response.blob()
-    
+
     if (navigator.clipboard && 'ClipboardItem' in window) {
       const clipboardItem = new (window as any).ClipboardItem({
         [blob.type]: blob,
@@ -54,21 +58,23 @@ export async function copyImageToClipboard(imageSrc: string) {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       const img = new window.Image()
-      
+
       return new Promise((resolve) => {
         img.onload = () => {
           canvas.width = img.width
           canvas.height = img.height
           ctx?.drawImage(img, 0, 0)
-          
+
           canvas.toBlob((blob) => {
             if (blob) {
-            if ('ClipboardItem' in window) {
-              const item = new (window as any).ClipboardItem({ [blob.type]: blob })
-              navigator.clipboard.write([item]).then(() => resolve(true))
-            } else {
-              resolve(false)
-            }
+              if ('ClipboardItem' in window) {
+                const item = new (window as any).ClipboardItem({
+                  [blob.type]: blob,
+                })
+                navigator.clipboard.write([item]).then(() => resolve(true))
+              } else {
+                resolve(false)
+              }
             } else {
               resolve(false)
             }
@@ -127,18 +133,20 @@ export const createEnhancedImageExtension = (
       return ({ node, view, getPos, HTMLAttributes }) => {
         const container = document.createElement('div')
         container.className = 'relative inline-block group'
-        
+
         const img = document.createElement('img')
         img.src = node.attrs.src
         img.alt = node.attrs.alt || ''
-        img.className = 'max-w-full h-auto rounded-lg border border-border cursor-pointer'
+        img.className =
+          'max-w-full h-auto rounded-lg border border-border cursor-pointer'
         img.style.width = node.attrs.width ? `${node.attrs.width}px` : 'auto'
         img.style.height = node.attrs.height ? `${node.attrs.height}px` : 'auto'
-        
+
         // Resize handles
         const resizeHandles = document.createElement('div')
-        resizeHandles.className = 'absolute inset-0 pointer-events-none group-hover:pointer-events-auto'
-        
+        resizeHandles.className =
+          'absolute inset-0 pointer-events-none group-hover:pointer-events-auto'
+
         // Create resize handles
         const createHandle = (position: string) => {
           const handle = document.createElement('div')
@@ -146,23 +154,25 @@ export const createEnhancedImageExtension = (
           handle.style.pointerEvents = 'auto'
           return handle
         }
-        
+
         const handles = {
           se: createHandle('bottom-0 right-0 cursor-se-resize'),
           sw: createHandle('bottom-0 left-0 cursor-sw-resize'),
           ne: createHandle('top-0 right-0 cursor-ne-resize'),
           nw: createHandle('top-0 left-0 cursor-nw-resize'),
         }
-        
-        Object.values(handles).forEach(handle => resizeHandles.appendChild(handle))
-        
+
+        Object.values(handles).forEach((handle) =>
+          resizeHandles.appendChild(handle)
+        )
+
         // Resize functionality
         let isResizing = false
         let startX = 0
         let startY = 0
         let startWidth = 0
         let startHeight = 0
-        
+
         const startResize = (e: MouseEvent, direction: string) => {
           e.preventDefault()
           e.stopPropagation()
@@ -171,33 +181,33 @@ export const createEnhancedImageExtension = (
           startY = e.clientY
           startWidth = img.offsetWidth
           startHeight = img.offsetHeight
-          
+
           document.addEventListener('mousemove', handleResize)
           document.addEventListener('mouseup', stopResize)
         }
-        
+
         const handleResize = (e: MouseEvent) => {
           if (!isResizing) return
-          
+
           const deltaX = e.clientX - startX
           const deltaY = e.clientY - startY
-          
+
           let newWidth = startWidth
           let newHeight = startHeight
-          
+
           // Calculate new dimensions based on direction
           if (handles.se || handles.ne) {
             newWidth = startWidth + deltaX
           } else {
             newWidth = startWidth - deltaX
           }
-          
+
           if (handles.se || handles.sw) {
             newHeight = startHeight + deltaY
           } else {
             newHeight = startHeight - deltaY
           }
-          
+
           // Maintain aspect ratio
           const aspectRatio = startWidth / startHeight
           if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -205,20 +215,20 @@ export const createEnhancedImageExtension = (
           } else {
             newWidth = newHeight * aspectRatio
           }
-          
+
           // Apply minimum size
           newWidth = Math.max(50, newWidth)
           newHeight = Math.max(50, newHeight)
-          
+
           img.style.width = `${newWidth}px`
           img.style.height = `${newHeight}px`
         }
-        
+
         const stopResize = () => {
           isResizing = false
           document.removeEventListener('mousemove', handleResize)
           document.removeEventListener('mouseup', stopResize)
-          
+
           // Update the node attributes
           const pos = getPos()
           if (pos !== undefined) {
@@ -231,13 +241,13 @@ export const createEnhancedImageExtension = (
             )
           }
         }
-        
+
         // Add event listeners to handles
         handles.se.addEventListener('mousedown', (e) => startResize(e, 'se'))
         handles.sw.addEventListener('mousedown', (e) => startResize(e, 'sw'))
         handles.ne.addEventListener('mousedown', (e) => startResize(e, 'ne'))
         handles.nw.addEventListener('mousedown', (e) => startResize(e, 'nw'))
-        
+
         // Keyboard shortcuts
         img.addEventListener('keydown', (e) => {
           if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -248,41 +258,45 @@ export const createEnhancedImageExtension = (
             }
           }
         })
-        
+
         // Make image focusable for keyboard shortcuts
         img.tabIndex = 0
-        
+
         // Click to focus
         img.addEventListener('click', () => {
           img.focus()
         })
-        
+
         // Context menu
         img.addEventListener('contextmenu', (e) => {
           e.preventDefault()
           const contextMenu = document.createElement('div')
-          contextMenu.className = 'fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50'
+          contextMenu.className =
+            'fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50'
           contextMenu.style.left = `${e.clientX}px`
           contextMenu.style.top = `${e.clientY}px`
-          
+
           const copyItem = document.createElement('div')
-          copyItem.className = 'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
+          copyItem.className =
+            'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
           copyItem.innerHTML = '<span>📋</span> Copy Image'
           copyItem.addEventListener('click', async () => {
             await onImageCopy(node.attrs.src)
             document.body.removeChild(contextMenu)
           })
-          
+
           const downloadItem = document.createElement('div')
-          downloadItem.className = 'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
+          downloadItem.className =
+            'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
           downloadItem.innerHTML = '<span>💾</span> Download Image'
           downloadItem.addEventListener('click', () => {
             onImageDownload(node.attrs.src, node.attrs.alt || 'image')
             document.body.removeChild(contextMenu)
           })
-          
+
           const deleteItem = document.createElement('div')
-          deleteItem.className = 'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-red-600'
+          deleteItem.className =
+            'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-red-600'
           deleteItem.innerHTML = '<span>🗑️</span> Delete Image'
           deleteItem.addEventListener('click', () => {
             const pos = getPos()
@@ -291,13 +305,13 @@ export const createEnhancedImageExtension = (
             }
             document.body.removeChild(contextMenu)
           })
-          
+
           contextMenu.appendChild(copyItem)
           contextMenu.appendChild(downloadItem)
           contextMenu.appendChild(deleteItem)
-          
+
           document.body.appendChild(contextMenu)
-          
+
           // Remove context menu when clicking elsewhere
           const removeMenu = () => {
             if (document.body.contains(contextMenu)) {
@@ -305,13 +319,13 @@ export const createEnhancedImageExtension = (
             }
             document.removeEventListener('click', removeMenu)
           }
-          
+
           setTimeout(() => document.addEventListener('click', removeMenu), 0)
         })
-        
+
         container.appendChild(img)
         container.appendChild(resizeHandles)
-        
+
         return {
           dom: container,
           contentDOM: null,
