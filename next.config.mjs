@@ -10,6 +10,7 @@ const nextConfig = {
     unoptimized: true,
   },
   serverExternalPackages: ['@prisma/client'],
+  output: 'standalone',
   async headers() {
     return [
       {

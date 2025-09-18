@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./data/app.db
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - db
+
+  # Optional: PostgreSQL for production-like environment
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: notepad
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
