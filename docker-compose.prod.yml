@@ -6,7 +6,7 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/notepad
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/notepad
       - NODE_ENV=production
     depends_on:
       db:
@@ -18,7 +18,7 @@ services:
     environment:
       POSTGRES_DB: notepad
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
