@@ -163,7 +163,7 @@ export function RichTextEditor({
   // Update content when prop changes (for real-time sync)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, { emitUpdate: false })
+      editor.commands.setContent(content, false)
     }
   }, [content, editor])
 

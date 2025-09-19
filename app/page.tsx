@@ -76,51 +76,109 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Local Notepad</CardTitle>
-          <CardDescription>Create or open notes by slug. Notes are stored locally.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="slug">Note Slug</Label>
-            <Input
-              id="slug"
-              placeholder="my-note (optional for create)"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="font-mono"
-            />
-            <p className="text-xs text-muted-foreground">3-64 characters: letters, numbers, hyphens, underscores</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4 animate-in fade-in duration-500">
+      <div className="w-full max-w-md space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2 animate-in slide-in-from-top-4 duration-700">
+          <h1 className="text-4xl font-bold tracking-tight">Local Notepad</h1>
+          <p className="text-muted-foreground">Create rich text notes with real-time collaboration</p>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="secret">Secret (optional)</Label>
-            <Input
-              id="secret"
-              type="password"
-              placeholder="6-128 characters"
-              value={secret}
-              onChange={(e) => setSecret(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <p className="text-xs text-muted-foreground">If set, required for editing and uploading images</p>
-          </div>
+        {/* Quick Actions */}
+        <Card className="border-0 shadow-lg bg-card/95 backdrop-blur animate-in slide-in-from-bottom-4 duration-700 delay-200">
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="slug" className="text-sm font-medium">Note Name</Label>
+                <Input
+                  id="slug"
+                  placeholder="Enter note name or leave blank to generate"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="h-11 border-border/50 focus:border-primary transition-colors"
+                />
+                <p className="text-xs text-muted-foreground">Letters, numbers, hyphens, and underscores only</p>
+              </div>
 
-          <div className="flex gap-2">
-            <Button onClick={handleCreate} disabled={isLoading} className="flex-1">
-              {isLoading ? "Creating..." : "Create"}
-            </Button>
-            <Button onClick={handleOpen} variant="outline" disabled={!slug.trim()} className="flex-1 bg-transparent">
-              Open
-            </Button>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="secret" className="text-sm font-medium">Password Protection</Label>
+                <Input
+                  type="password"
+                  id="secret"
+                  placeholder="Optional: Add password protection"
+                  value={secret}
+                  onChange={(e) => setSecret(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="h-11 border-border/50 focus:border-primary transition-colors"
+                />
+                <p className="text-xs text-muted-foreground">Protects editing and image uploads</p>
+              </div>
+            </div>
 
-          <p className="text-xs text-center text-muted-foreground">Press Ctrl/Cmd+Enter to create</p>
-        </CardContent>
-      </Card>
+            <div className="space-y-3">
+              <Button 
+                onClick={handleCreate} 
+                disabled={isLoading} 
+                className="w-full h-11 font-medium transition-all duration-200 hover:scale-[1.02] focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                size="lg"
+                aria-label={isLoading ? "Creating note..." : "Create a new note"}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
+                    Creating Note...
+                  </div>
+                ) : (
+                  "Create New Note"
+                )}
+              </Button>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/50" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-card px-2 text-muted-foreground">OR</span>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleOpen} 
+                variant="outline" 
+                disabled={!slug.trim() || isLoading} 
+                className="w-full h-11 font-medium border-border/50 hover:border-primary transition-all duration-200 focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                size="lg"
+                aria-label="Open existing note with the name you entered"
+              >
+                Open Existing Note
+              </Button>
+            </div>
+
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">
+                Press <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">⌘ Enter</kbd> to create
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Features */}
+        <div className="grid grid-cols-2 gap-3 text-center animate-in slide-in-from-bottom-4 duration-700 delay-500">
+          <div className="space-y-2 transition-transform hover:scale-105 duration-200">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mx-auto transition-colors hover:bg-primary/20">
+              <span className="text-lg">✨</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Rich Text Editor</p>
+          </div>
+          <div className="space-y-2 transition-transform hover:scale-105 duration-200">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mx-auto transition-colors hover:bg-primary/20">
+              <span className="text-lg">🔄</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Real-time Sync</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

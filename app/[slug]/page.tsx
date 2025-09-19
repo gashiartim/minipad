@@ -4,23 +4,21 @@ import { useState, useEffect, useCallback, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useRealtimeNote } from "@/hooks/use-realtime-note"
-import { ImageUpload } from "@/components/image-upload"
 import { ImageGallery } from "@/components/image-gallery"
 import { NoteLogin } from "@/components/note-login"
 import { RichTextEditor } from "@/components/rich-text-editor"
-import { Save, Home, Clock, Calendar, ImageIcon, Type, FileText } from "lucide-react"
+import { Save, Home, Clock, Calendar, ImageIcon } from "lucide-react"
 
 interface Note {
   id: string
   slug: string
   content: string
-  contentRich?: string
-  contentFormat: "plain" | "rich"
+  contentRich: string
+  contentFormat: "rich"
   createdAt: string
   updatedAt: string
   images: Array<{
@@ -41,9 +39,7 @@ interface PageProps {
 export default function NotePage({ params }: PageProps) {
   const { slug } = use(params)
   const [note, setNote] = useState<Note | null>(null)
-  const [content, setContent] = useState("")
   const [contentRich, setContentRich] = useState("")
-  const [contentFormat, setContentFormat] = useState<"plain" | "rich">("plain")
   const [secret, setSecret] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -53,7 +49,6 @@ export default function NotePage({ params }: PageProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authError, setAuthError] = useState("")
   const [needsAuth, setNeedsAuth] = useState(false)
-  const [localContent, setLocalContent] = useState("")
   const [isUpdatingFromRemote, setIsUpdatingFromRemote] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -66,10 +61,9 @@ export default function NotePage({ params }: PageProps) {
     onUpdate: useCallback((update) => {
       if (update.type === "content_update") {
         // Check for conflicts: if user has unsaved changes when remote update arrives
-        const currentContent = contentFormat === "rich" ? contentRich : content
-        const updateContent = update.contentFormat === "rich" ? update.contentRich : update.content
+        const updateContent = update.contentRich || ""
         
-        if (hasUnsavedChanges && currentContent !== updateContent) {
+        if (hasUnsavedChanges && contentRich !== updateContent) {
           toast({
             title: "Content updated by another user",
             description: "Your changes will be preserved. Save to overwrite or refresh to discard.",
@@ -80,30 +74,22 @@ export default function NotePage({ params }: PageProps) {
         
         setIsUpdatingFromRemote(true)
         
-        // Update content based on format
-        if (update.contentFormat === "rich" && update.contentRich !== undefined) {
+        // Update rich content
+        if (update.contentRich !== undefined) {
           setContentRich(update.contentRich)
-          setContentFormat("rich")
-        }
-        if (update.content !== undefined) {
-          setContent(update.content)
-          setLocalContent(update.content)
-        }
-        if (update.contentFormat !== undefined) {
-          setContentFormat(update.contentFormat)
         }
         
         setNote((prev) => prev ? { 
           ...prev, 
           content: update.content || prev.content,
           contentRich: update.contentRich || prev.contentRich,
-          contentFormat: update.contentFormat || prev.contentFormat,
+          contentFormat: "rich", // Always use rich format now
           updatedAt: update.updatedAt || prev.updatedAt 
         } : null)
         setHasUnsavedChanges(false)
         setTimeout(() => setIsUpdatingFromRemote(false), 500)
       }
-    }, [hasUnsavedChanges, content, contentRich, contentFormat, toast])
+    }, [hasUnsavedChanges, contentRich, toast])
   })
 
   const fetchNote = useCallback(async (providedSecret?: string) => {
@@ -137,11 +123,12 @@ export default function NotePage({ params }: PageProps) {
       }
 
       const noteData = await response.json()
-      setNote(noteData)
-      setContent(noteData.content)
-      setContentRich(noteData.contentRich || "")
-      setContentFormat(noteData.contentFormat || "plain")
-      setLocalContent(noteData.content)
+      setNote({
+        ...noteData,
+        contentRich: noteData.contentRich || (noteData.content ? `<p>${noteData.content.replace(/\n/g, '</p><p>')}</p>` : ""),
+        contentFormat: "rich"
+      })
+      setContentRich(noteData.contentRich || (noteData.content ? `<p>${noteData.content.replace(/\n/g, '</p><p>')}</p>` : ""))
       setIsAuthenticated(true)
       setNeedsAuth(false)
       setAuthError("")
@@ -176,9 +163,7 @@ export default function NotePage({ params }: PageProps) {
     if (!note || isSaving || !isAuthenticated) return
 
     // Capture current content for optimistic update
-    const contentToSave = content
     const contentRichToSave = contentRich
-    const contentFormatToSave = contentFormat
     
     setIsSaving(true)
     // Optimistic update
@@ -188,16 +173,10 @@ export default function NotePage({ params }: PageProps) {
     try {
       const requestBody: any = {
         secret: secret || undefined,
-      }
-      
-      if (contentFormatToSave === "rich") {
-        requestBody.contentRich = contentRichToSave
-        requestBody.contentFormat = "rich"
-        // Also save plain text version for fallback
-        requestBody.content = contentToSave
-      } else {
-        requestBody.content = contentToSave
-        requestBody.contentFormat = "plain"
+        contentRich: contentRichToSave,
+        contentFormat: "rich",
+        // Also save plain text version for fallback (strip HTML)
+        content: contentRichToSave.replace(/<[^>]*>/g, '')
       }
       
       const response = await fetch(`/api/notes/${slug}`, {
@@ -210,7 +189,7 @@ export default function NotePage({ params }: PageProps) {
 
       if (!response.ok) {
         // Revert optimistic update on error
-        setHasUnsavedChanges(content !== note.content)
+        setHasUnsavedChanges(contentRich !== note.contentRich)
         setLastSaved(null)
         
         // If authentication fails, show login screen again
@@ -232,12 +211,11 @@ export default function NotePage({ params }: PageProps) {
       // Update with server response
       setNote((prev) => (prev ? { 
         ...prev, 
-        content: contentToSave,
+        content: contentRichToSave.replace(/<[^>]*>/g, ''),
         contentRich: contentRichToSave,
-        contentFormat: contentFormatToSave,
+        contentFormat: "rich",
         updatedAt: data.updatedAt 
       } : null))
-      setLocalContent(contentToSave)
       
       // Only show success toast if we're not in the middle of real-time updates
       if (!isUpdatingFromRemote) {
@@ -248,7 +226,7 @@ export default function NotePage({ params }: PageProps) {
       }
     } catch (error) {
       // Revert optimistic update
-      setHasUnsavedChanges(content !== note.content)
+      setHasUnsavedChanges(contentRich !== note.contentRich)
       setLastSaved(null)
       
       toast({
@@ -259,7 +237,7 @@ export default function NotePage({ params }: PageProps) {
     } finally {
       setIsSaving(false)
     }
-  }, [note, content, contentRich, contentFormat, secret, slug, toast, isSaving, isAuthenticated, isUpdatingFromRemote])
+  }, [note, contentRich, secret, slug, toast, isSaving, isAuthenticated, isUpdatingFromRemote])
 
   // Auto-save with debounce
   useEffect(() => {
@@ -270,7 +248,7 @@ export default function NotePage({ params }: PageProps) {
     }, 1500)
 
     return () => clearTimeout(timer)
-  }, [content, contentRich, hasUnsavedChanges, autosaveEnabled, saveNote, note])
+  }, [contentRich, hasUnsavedChanges, autosaveEnabled, saveNote, note])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -289,45 +267,12 @@ export default function NotePage({ params }: PageProps) {
     fetchNote()
   }, [fetchNote])
 
-  const handleContentChange = (value: string) => {
-    // Don't mark as unsaved if this is from a remote update
-    if (isUpdatingFromRemote) return
-    
-    setContent(value)
-    setLocalContent(value)
-    setHasUnsavedChanges(true)
-  }
-
   const handleRichContentChange = (value: string) => {
     // Don't mark as unsaved if this is from a remote update
     if (isUpdatingFromRemote) return
     
     setContentRich(value)
-    setContentFormat("rich")
     setHasUnsavedChanges(true)
-  }
-
-  const switchToRichEditor = () => {
-    setContentFormat("rich")
-    // Convert plain text to basic HTML if needed
-    if (!contentRich && content) {
-      setContentRich(`<p>${content.replace(/\n/g, '</p><p>')}</p>`)
-    }
-  }
-
-  const switchToPlainEditor = () => {
-    setContentFormat("plain")
-  }
-
-  const handleImageUploaded = (image: any) => {
-    setNote((prev) =>
-      prev
-        ? {
-            ...prev,
-            images: [...prev.images, image],
-          }
-        : null,
-    )
   }
 
   // Show login screen if authentication is needed
@@ -344,41 +289,43 @@ export default function NotePage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-8 w-16" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-6 w-20" />
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-32" />
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 animate-in fade-in duration-500">
+        {/* Loading header */}
+        <div className="border-b border-border/50 bg-background/95 backdrop-blur">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-6 w-32 animate-pulse" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-3 w-12 animate-pulse" />
+                  <Skeleton className="h-3 w-16 animate-pulse" />
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Skeleton className="h-64 w-full" />
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-16 flex-1" />
-                <Skeleton className="h-10 w-20" />
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-20 animate-pulse" />
+                <Skeleton className="h-8 w-16 animate-pulse" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
+
+        {/* Loading content */}
+        <main className="max-w-4xl mx-auto p-4">
+          <div className="bg-background/95 backdrop-blur border border-border/50 rounded-lg shadow-sm animate-in slide-in-from-bottom-4 duration-700 delay-200">
+            <div className="p-6 space-y-4">
+              <Skeleton className="h-64 w-full animate-pulse" />
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-16 flex-1 animate-pulse" />
+                <Skeleton className="h-10 w-20 animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          {/* Loading footer */}
+          <div className="mt-6 animate-in slide-in-from-bottom-4 duration-700 delay-500">
+            <Skeleton className="h-12 w-full rounded-lg animate-pulse" />
+          </div>
+        </main>
       </div>
     )
   }
@@ -388,137 +335,133 @@ export default function NotePage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="font-mono text-lg text-balance">{note.slug}</span>
-              <Button onClick={() => router.push("/")} variant="outline" size="sm">
-                <Home className="h-4 w-4 mr-2" />
-                Home
-              </Button>
-            </CardTitle>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>Created: {new Date(note.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span>
-                {lastSaved && (
-                  <span className="text-green-600 ml-2">(Last saved: {lastSaved.toLocaleTimeString()})</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                <span>Images: {note.images.length}</span>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Content Editor */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Content</CardTitle>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={contentFormat === "plain" ? "default" : "outline"}
-                    size="sm"
-                    onClick={switchToPlainEditor}
-                  >
-                    <FileText className="h-4 w-4 mr-1" />
-                    Plain
-                  </Button>
-                  <Button
-                    variant={contentFormat === "rich" ? "default" : "outline"}
-                    size="sm"
-                    onClick={switchToRichEditor}
-                  >
-                    <Type className="h-4 w-4 mr-1" />
-                    Rich
-                  </Button>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 animate-in fade-in duration-500">
+      {/* Header with note title and controls */}
+      <div className="border-b border-border/50 bg-background/95 backdrop-blur sticky top-0 z-10 animate-in slide-in-from-top-4 duration-700">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="font-mono text-xl font-semibold text-balance">{note.slug}</h1>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <div className={`h-2 w-2 rounded-full ${isRealtimeConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <span>{isRealtimeConnected ? 'Live' : 'Offline'}</span>
                 </div>
-                <Label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={autosaveEnabled}
-                    onChange={(e) => setAutosaveEnabled(e.target.checked)}
-                    className="rounded"
-                  />
-                  Auto-save
-                </Label>
                 {hasUnsavedChanges && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
-                    <span className="text-xs text-orange-500">Unsaved changes</span>
+                    <span className="text-orange-600">Unsaved</span>
                   </div>
                 )}
                 {isSaving && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
-                    <span className="text-xs text-blue-500">Saving...</span>
+                    <span className="text-blue-600">Saving...</span>
                   </div>
                 )}
                 {isUpdatingFromRemote && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-xs text-green-500">Sync update</span>
+                    <span className="text-green-600">Syncing</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${isRealtimeConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <span className="text-xs text-muted-foreground">
-                    {isRealtimeConnected ? 'Live' : 'Offline'}
-                  </span>
-                </div>
+                {lastSaved && (
+                  <span className="text-green-600">Saved {lastSaved.toLocaleTimeString()}</span>
+                )}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {contentFormat === "rich" ? (
-              <RichTextEditor
-                content={contentRich}
-                onUpdate={handleRichContentChange}
-                placeholder="Start writing your note..."
-                slug={slug}
-                secret={secret}
-                className="min-h-[300px]"
-              />
-            ) : (
-              <Textarea
-                value={content}
-                onChange={(e) => handleContentChange(e.target.value)}
-                placeholder="Start writing your note..."
-                className="min-h-[300px] resize-y font-mono text-sm leading-relaxed"
-              />
-            )}
-
-            <div className="flex justify-end">
-              <Button onClick={saveNote} disabled={isSaving}>
+            
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={autosaveEnabled}
+                  onChange={(e) => setAutosaveEnabled(e.target.checked)}
+                  className="rounded focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  id="autosave"
+                  aria-describedby="autosave-description"
+                />
+                <label htmlFor="autosave" className="text-muted-foreground cursor-pointer">Auto-save</label>
+                <span id="autosave-description" className="sr-only">
+                  Automatically save changes after 1.5 seconds of inactivity
+                </span>
+              </div>
+              
+              <Button 
+                onClick={saveNote} 
+                disabled={isSaving} 
+                size="sm" 
+                className="transition-all duration-200 focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label={isSaving ? "Saving note..." : "Save note manually"}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? "Saving..." : "Save"}
               </Button>
+              
+              <Button 
+                onClick={() => router.push("/")} 
+                variant="outline" 
+                size="sm" 
+                className="transition-all duration-200 focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Go to homepage"
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Button>
             </div>
-
-            <p className="text-xs text-muted-foreground text-pretty">
-              Press Ctrl/Cmd+S to save • Auto-save after 1.5s of inactivity
-              {contentFormat === "rich" && " • Paste images directly in rich editor"}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Image Upload */}
-        <ImageUpload slug={note.slug} secret={secret} onImageUploaded={handleImageUploaded} />
-
-        {/* Image Gallery */}
-        {note.images.length > 0 && <ImageGallery images={note.images} />}
+          </div>
+        </div>
       </div>
+
+      {/* Main content area */}
+      <main className="max-w-4xl mx-auto p-4">
+        <section className="bg-background/95 backdrop-blur border border-border/50 rounded-lg shadow-sm animate-in slide-in-from-bottom-4 duration-700 delay-200" aria-label="Note editor">
+          <RichTextEditor
+            content={contentRich}
+            onUpdate={handleRichContentChange}
+            placeholder="Start writing your note..."
+            slug={slug}
+            secret={secret}
+            className="min-h-[500px]"
+          />
+        </section>
+
+        {/* Metadata and image gallery */}
+        <footer className="mt-6 space-y-4 animate-in slide-in-from-bottom-4 duration-700 delay-500">
+          <div 
+            className="flex items-center justify-between text-xs text-muted-foreground bg-background/50 backdrop-blur rounded-lg px-4 py-3 border border-border/30 transition-colors hover:bg-background/70"
+            role="contentinfo"
+            aria-label="Note metadata and shortcuts"
+          >
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3" aria-hidden="true" />
+                <span>Created <time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleDateString()}</time></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                <span>Updated <time dateTime={note.updatedAt}>{new Date(note.updatedAt).toLocaleDateString()}</time></span>
+              </div>
+              {note.images.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-3 w-3" aria-hidden="true" />
+                  <span>{note.images.length} image{note.images.length !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </div>
+            <div className="text-muted-foreground/70" role="note" aria-label="Keyboard shortcuts and tips">
+              Press <kbd className="px-1.5 py-0.5 text-xs bg-muted/50 rounded">⌘S</kbd> to save • Auto-save after 1.5s • Paste images directly
+            </div>
+          </div>
+
+          {/* Image Gallery */}
+          {note.images.length > 0 && (
+            <section aria-label="Attached images" className="animate-in fade-in duration-700 delay-700">
+              <ImageGallery images={note.images} />
+            </section>
+          )}
+        </footer>
+      </main>
     </div>
   )
 }
