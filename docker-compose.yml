@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build: .
@@ -8,6 +6,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/notepad
       - NODE_ENV=production
+    volumes:
+      - uploaded_images:/app/data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -30,3 +30,4 @@ services:
 
 volumes:
   postgres_data:
+  uploaded_images:

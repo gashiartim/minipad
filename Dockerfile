@@ -18,7 +18,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client
+# Use production schema for PostgreSQL and generate client
+RUN cp prisma/schema.prod.prisma prisma/schema.prisma
 RUN npx prisma generate
 
 # Build the application
@@ -28,7 +29,7 @@ RUN corepack enable pnpm && pnpm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -42,15 +43,19 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copy Prisma files (the standalone build should already include the generated client)
 COPY --from=builder /app/prisma ./prisma
 
+# Copy startup script
+COPY scripts/docker-entrypoint.sh ./scripts/
+RUN chmod +x ./scripts/docker-entrypoint.sh
+
 # Create uploads directory for images
-RUN mkdir -p data/uploads && chown -R nextjs:nodejs data
+RUN mkdir -p data/uploads && chown -R nextjs:nodejs data && chown -R nextjs:nodejs scripts
 
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# Run database migrations on startup
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# Use startup script
+CMD ["./scripts/docker-entrypoint.sh"]
