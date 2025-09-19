@@ -382,6 +382,7 @@ export function RichTextEditor({
         className={`${
           editable ? 'border-t-0 rounded-t-none' : ''
         } border border-border rounded-md`}
+        data-testid="rich-text-editor"
       />
       {editable && (
         <div className="text-xs text-muted-foreground p-2 border-t border-border bg-muted/30 rounded-b-md">

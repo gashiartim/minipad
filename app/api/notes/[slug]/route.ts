@@ -9,7 +9,7 @@ import {
   logRequest,
   logError,
 } from "@/lib/api-middleware"
-import { broadcastNoteUpdate } from "./events/route"
+import { broadcastNoteUpdate } from "@/lib/socket"
 
 interface RouteParams {
   params: Promise<{ slug: string }>

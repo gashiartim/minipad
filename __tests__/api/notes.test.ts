@@ -2,8 +2,12 @@ import { NextRequest } from "next/server"
 import { POST } from "@/app/api/notes/route"
 import { prisma } from "@/lib/db"
 
-// Mock the database
+// Mock the database and Socket.IO
 jest.mock("@/lib/db")
+jest.mock("@/lib/socket", () => ({
+  broadcastNoteUpdate: jest.fn(),
+}))
+
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 
 describe("/api/notes", () => {

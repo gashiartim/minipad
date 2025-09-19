@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { useRealtimeNote } from "@/hooks/use-realtime-note"
+import { useRealtimeNoteSocket } from "@/hooks/use-realtime-note-socket"
 import { ImageGallery } from "@/components/image-gallery"
 import { NoteLogin } from "@/components/note-login"
 import { RichTextEditor } from "@/components/rich-text-editor"
@@ -54,7 +54,7 @@ export default function NotePage({ params }: PageProps) {
   const { toast } = useToast()
 
   // Real-time synchronization
-  const { isConnected: isRealtimeConnected } = useRealtimeNote({
+  const { isConnected: isRealtimeConnected } = useRealtimeNoteSocket({
     slug,
     secret,
     enabled: isAuthenticated,
