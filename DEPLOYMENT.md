@@ -48,7 +48,7 @@ The app will be available at `http://localhost:3000`
 1. **Create PostgreSQL Service**
    - In Coolify dashboard, create a new PostgreSQL service
    - Note the connection details
-   - Ensure the database name is `notepad`
+   - Use the default `postgres` database name
 
 2. **Create Application**
    - Add new application in Coolify
@@ -58,7 +58,7 @@ The app will be available at `http://localhost:3000`
 3. **Environment Variables**
    Set these environment variables in Coolify:
    ```bash
-   DATABASE_URL=postgresql://postgres:password@postgres-service:5432/notepad
+   DATABASE_URL=postgresql://postgres:password@postgres-service:5432/postgres
    NODE_ENV=production
    POSTGRES_PASSWORD=your_secure_password
    ```
@@ -83,7 +83,7 @@ The application automatically runs database migrations on startup using the Dock
 ### Monitoring
 - Health check endpoint: `/api/health`
 - Logs are available in Coolify dashboard
-- Real-time features use Server-Sent Events
+- Real-time features use Socket.IO WebSockets
 
 ## Configuration Files
 
@@ -120,8 +120,9 @@ The application automatically runs database migrations on startup using the Dock
    - Check file permissions
 
 3. **Real-time Features Not Working**
-   - Check if SSE is supported by your proxy
-   - Ensure WebSocket/SSE traffic is not blocked
+   - Check if WebSocket upgrades are supported by your proxy
+   - Ensure WebSocket traffic is not blocked
+   - Verify Socket.IO endpoint `/api/socketio/` is accessible
 
 4. **Build Failures**
    - Check Node.js version (18+ required)
