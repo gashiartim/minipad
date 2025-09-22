@@ -54,8 +54,12 @@ COPY --from=builder /app/prisma ./prisma
 COPY scripts/docker-entrypoint.sh ./scripts/
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
-# Create uploads directory for images
-RUN mkdir -p data/uploads && chown -R nextjs:nodejs data && chown -R nextjs:nodejs scripts
+# Create uploads directory for images and fix permissions
+RUN mkdir -p data/uploads && \
+    chown -R nextjs:nodejs data && \
+    chown -R nextjs:nodejs scripts && \
+    chown -R nextjs:nodejs node_modules && \
+    chown -R nextjs:nodejs prisma
 
 USER nextjs
 
