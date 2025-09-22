@@ -47,8 +47,9 @@ COPY --from=builder /app/server.js ./
 COPY --from=builder /app/package.json ./
 RUN corepack enable pnpm && pnpm add --prod socket.io
 
-# Copy Prisma files (the standalone build should already include the generated client)
+# Copy Prisma files and regenerate client for production
 COPY --from=builder /app/prisma ./prisma
+RUN npx prisma generate
 
 # Copy startup script
 COPY scripts/docker-entrypoint.sh ./scripts/
@@ -59,6 +60,7 @@ RUN mkdir -p data/uploads && \
     chown -R nextjs:nodejs data && \
     chown -R nextjs:nodejs scripts && \
     chown -R nextjs:nodejs prisma && \
+    chown -R nextjs:nodejs node_modules && \
     chown nextjs:nodejs /app && \
     chmod 755 /app
 
