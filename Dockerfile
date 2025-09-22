@@ -58,8 +58,9 @@ RUN chmod +x ./scripts/docker-entrypoint.sh
 RUN mkdir -p data/uploads && \
     chown -R nextjs:nodejs data && \
     chown -R nextjs:nodejs scripts && \
-    chown -R nextjs:nodejs node_modules && \
-    chown -R nextjs:nodejs prisma
+    chown -R nextjs:nodejs prisma && \
+    chown nextjs:nodejs /app && \
+    chmod 755 /app
 
 USER nextjs
 
