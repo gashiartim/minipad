@@ -43,6 +43,10 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copy our custom server.js for Socket.IO support
 COPY --from=builder /app/server.js ./
 
+# Install only Socket.IO dependencies for production
+COPY --from=builder /app/package.json ./
+RUN corepack enable pnpm && pnpm add --prod socket.io
+
 # Copy Prisma files (the standalone build should already include the generated client)
 COPY --from=builder /app/prisma ./prisma
 

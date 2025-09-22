@@ -6,7 +6,11 @@
       "WebFetch(domain:socket.io)",
       "Bash(pnpm run:*)",
       "Bash(pnpm test:*)",
-      "Bash(pnpm db:generate:*)"
+      "Bash(pnpm db:generate:*)",
+      "Bash(grep:*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(docker rmi:*)"
     ],
     "deny": [],
     "ask": []
