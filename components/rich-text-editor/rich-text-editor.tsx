@@ -196,38 +196,23 @@ export function RichTextEditor({
     [editor]
   )
   const toggleH1 = useCallback(
-    () => {
-      console.log('H1 button clicked', editor?.can().chain().focus().toggleHeading({ level: 1 }).run())
-      return editor?.chain().focus().toggleHeading({ level: 1 }).run()
-    },
+    () => editor?.chain().focus().toggleHeading({ level: 1 }).run(),
     [editor]
   )
   const toggleH2 = useCallback(
-    () => {
-      console.log('H2 button clicked', editor?.can().chain().focus().toggleHeading({ level: 2 }).run())
-      return editor?.chain().focus().toggleHeading({ level: 2 }).run()
-    },
+    () => editor?.chain().focus().toggleHeading({ level: 2 }).run(),
     [editor]
   )
   const toggleH3 = useCallback(
-    () => {
-      console.log('H3 button clicked', editor?.can().chain().focus().toggleHeading({ level: 3 }).run())
-      return editor?.chain().focus().toggleHeading({ level: 3 }).run()
-    },
+    () => editor?.chain().focus().toggleHeading({ level: 3 }).run(),
     [editor]
   )
   const toggleBulletList = useCallback(
-    () => {
-      console.log('Bullet list clicked', editor?.can().chain().focus().toggleBulletList().run())
-      return editor?.chain().focus().toggleBulletList().run()
-    },
+    () => editor?.chain().focus().toggleBulletList().run(),
     [editor]
   )
   const toggleOrderedList = useCallback(
-    () => {
-      console.log('Ordered list clicked', editor?.can().chain().focus().toggleOrderedList().run())
-      return editor?.chain().focus().toggleOrderedList().run()
-    },
+    () => editor?.chain().focus().toggleOrderedList().run(),
     [editor]
   )
   const toggleBlockquote = useCallback(

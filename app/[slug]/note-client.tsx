@@ -48,6 +48,7 @@ export function NoteClient({ slug }: NoteClientProps) {
   const [authError, setAuthError] = useState("")
   const [needsAuth, setNeedsAuth] = useState(false)
   const [isUpdatingFromRemote, setIsUpdatingFromRemote] = useState(false)
+  const [isUpdatingLocally, setIsUpdatingLocally] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -61,13 +62,21 @@ export function NoteClient({ slug }: NoteClientProps) {
         // Check for conflicts: if user has unsaved changes when remote update arrives
         const updateContent = update.contentRich || ""
         
-        if (hasUnsavedChanges && contentRich !== updateContent) {
-          toast({
-            title: "Content updated by another user",
-            description: "Your changes will be preserved. Save to overwrite or refresh to discard.",
-            variant: "default",
-          })
-          return // Don't overwrite local changes
+        // Only prevent updates if there are unsaved changes AND the content is significantly different
+        // Allow updates if we're currently making local changes (formatting buttons) or saving
+        if (hasUnsavedChanges && contentRich !== updateContent && !isSaving && !isUpdatingLocally) {
+          // Additional check: if the update seems to be our own change (same base content), allow it
+          const strippedLocal = contentRich.replace(/<[^>]*>/g, '').trim()
+          const strippedUpdate = updateContent.replace(/<[^>]*>/g, '').trim()
+          
+          if (strippedLocal !== strippedUpdate) {
+            toast({
+              title: "Content updated by another user",
+              description: "Your changes will be preserved. Save to overwrite or refresh to discard.",
+              variant: "default",
+            })
+            return // Don't overwrite local changes
+          }
         }
         
         setIsUpdatingFromRemote(true)
@@ -87,7 +96,7 @@ export function NoteClient({ slug }: NoteClientProps) {
         setHasUnsavedChanges(false)
         setTimeout(() => setIsUpdatingFromRemote(false), 500)
       }
-    }, [hasUnsavedChanges, contentRich, toast])
+    }, [hasUnsavedChanges, contentRich, toast, isSaving, isUpdatingLocally])
   })
 
   const fetchNote = useCallback(async (providedSecret?: string) => {
@@ -269,8 +278,12 @@ export function NoteClient({ slug }: NoteClientProps) {
     // Don't mark as unsaved if this is from a remote update
     if (isUpdatingFromRemote) return
     
+    setIsUpdatingLocally(true)
     setContentRich(value)
     setHasUnsavedChanges(true)
+    
+    // Clear the local update flag after a brief delay
+    setTimeout(() => setIsUpdatingLocally(false), 100)
   }
 
   // Show login screen if authentication is needed
