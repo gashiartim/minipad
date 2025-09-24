@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -52,6 +52,20 @@ export function NoteClient({ slug }: NoteClientProps) {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Refs for frequently changing values to stabilize callbacks
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges)
+  const contentRichRef = useRef(contentRich)
+  const isSavingRef = useRef(isSaving)
+  const isUpdatingLocallyRef = useRef(isUpdatingLocally)
+  
+  // Keep refs up to date
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges
+    contentRichRef.current = contentRich
+    isSavingRef.current = isSaving
+    isUpdatingLocallyRef.current = isUpdatingLocally
+  }, [hasUnsavedChanges, contentRich, isSaving, isUpdatingLocally])
+
   // Real-time synchronization
   const { isConnected: isRealtimeConnected } = useRealtimeNoteSocket({
     slug,
@@ -64,9 +78,9 @@ export function NoteClient({ slug }: NoteClientProps) {
         
         // Only prevent updates if there are unsaved changes AND the content is significantly different
         // Allow updates if we're currently making local changes (formatting buttons) or saving
-        if (hasUnsavedChanges && contentRich !== updateContent && !isSaving && !isUpdatingLocally) {
+        if (hasUnsavedChangesRef.current && contentRichRef.current !== updateContent && !isSavingRef.current && !isUpdatingLocallyRef.current) {
           // Additional check: if the update seems to be our own change (same base content), allow it
-          const strippedLocal = contentRich.replace(/<[^>]*>/g, '').trim()
+          const strippedLocal = contentRichRef.current.replace(/<[^>]*>/g, '').trim()
           const strippedUpdate = updateContent.replace(/<[^>]*>/g, '').trim()
           
           if (strippedLocal !== strippedUpdate) {
@@ -96,7 +110,7 @@ export function NoteClient({ slug }: NoteClientProps) {
         setHasUnsavedChanges(false)
         setTimeout(() => setIsUpdatingFromRemote(false), 500)
       }
-    }, [hasUnsavedChanges, contentRich, toast, isSaving, isUpdatingLocally])
+    }, [toast]) // Only toast dependency - everything else uses refs
   })
 
   const fetchNote = useCallback(async (providedSecret?: string) => {

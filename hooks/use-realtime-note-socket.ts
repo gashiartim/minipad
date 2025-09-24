@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { getSocket } from "@/lib/socket-client"
 
 interface RealtimeNoteUpdate {
@@ -26,10 +26,15 @@ export function useRealtimeNoteSocket({
 }: UseRealtimeNoteOptions) {
   const [isConnected, setIsConnected] = useState(false)
   const [lastError, setLastError] = useState<string | null>(null)
+  const onUpdateRef = useRef(onUpdate)
+  
+  // Keep ref up to date
+  useEffect(() => {
+    onUpdateRef.current = onUpdate
+  }, [onUpdate])
 
   const handleConnect = useCallback(() => {
     const socket = getSocket()
-    console.log("Socket connected:", socket.id)
     setIsConnected(true)
     setLastError(null)
     
@@ -38,7 +43,6 @@ export function useRealtimeNoteSocket({
   }, [slug])
 
   const handleDisconnect = useCallback(() => {
-    console.log("Socket disconnected")
     setIsConnected(false)
   }, [])
 
@@ -49,9 +53,8 @@ export function useRealtimeNoteSocket({
   }, [])
 
   const handleNoteUpdate = useCallback((data: RealtimeNoteUpdate) => {
-    console.log("Received note update:", data)
-    onUpdate?.(data)
-  }, [onUpdate])
+    onUpdateRef.current?.(data)
+  }, []) // No dependencies - uses ref
 
   useEffect(() => {
     if (!enabled) {
@@ -81,7 +84,7 @@ export function useRealtimeNoteSocket({
       socket.off("note-update", handleNoteUpdate)
       socket.emit("leave-note", slug)
     }
-  }, [slug, enabled, handleConnect, handleDisconnect, handleConnectError, handleNoteUpdate])
+  }, [slug, enabled]) // Removed callback dependencies
 
   const disconnect = useCallback(() => {
     const socket = getSocket()
