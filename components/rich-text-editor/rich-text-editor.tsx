@@ -133,7 +133,19 @@ export function RichTextEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+      }),
       EnhancedImage,
       Placeholder.configure({
         placeholder,
@@ -184,23 +196,38 @@ export function RichTextEditor({
     [editor]
   )
   const toggleH1 = useCallback(
-    () => editor?.chain().focus().toggleHeading({ level: 1 }).run(),
+    () => {
+      console.log('H1 button clicked', editor?.can().chain().focus().toggleHeading({ level: 1 }).run())
+      return editor?.chain().focus().toggleHeading({ level: 1 }).run()
+    },
     [editor]
   )
   const toggleH2 = useCallback(
-    () => editor?.chain().focus().toggleHeading({ level: 2 }).run(),
+    () => {
+      console.log('H2 button clicked', editor?.can().chain().focus().toggleHeading({ level: 2 }).run())
+      return editor?.chain().focus().toggleHeading({ level: 2 }).run()
+    },
     [editor]
   )
   const toggleH3 = useCallback(
-    () => editor?.chain().focus().toggleHeading({ level: 3 }).run(),
+    () => {
+      console.log('H3 button clicked', editor?.can().chain().focus().toggleHeading({ level: 3 }).run())
+      return editor?.chain().focus().toggleHeading({ level: 3 }).run()
+    },
     [editor]
   )
   const toggleBulletList = useCallback(
-    () => editor?.chain().focus().toggleBulletList().run(),
+    () => {
+      console.log('Bullet list clicked', editor?.can().chain().focus().toggleBulletList().run())
+      return editor?.chain().focus().toggleBulletList().run()
+    },
     [editor]
   )
   const toggleOrderedList = useCallback(
-    () => editor?.chain().focus().toggleOrderedList().run(),
+    () => {
+      console.log('Ordered list clicked', editor?.can().chain().focus().toggleOrderedList().run())
+      return editor?.chain().focus().toggleOrderedList().run()
+    },
     [editor]
   )
   const toggleBlockquote = useCallback(
@@ -307,6 +334,7 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH1}
+              disabled={!editor.can().chain().focus().toggleHeading({ level: 1 }).run()}
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Heading 1"
             >
@@ -318,6 +346,7 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH2}
+              disabled={!editor.can().chain().focus().toggleHeading({ level: 2 }).run()}
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Heading 2"
             >
@@ -329,6 +358,7 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH3}
+              disabled={!editor.can().chain().focus().toggleHeading({ level: 3 }).run()}
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Heading 3"
             >
@@ -341,6 +371,7 @@ export function RichTextEditor({
               variant={editor.isActive('bulletList') ? 'default' : 'ghost'}
               size="sm"
               onClick={toggleBulletList}
+              disabled={!editor.can().chain().focus().toggleBulletList().run()}
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Bullet list"
             >
@@ -350,6 +381,7 @@ export function RichTextEditor({
               variant={editor.isActive('orderedList') ? 'default' : 'ghost'}
               size="sm"
               onClick={toggleOrderedList}
+              disabled={!editor.can().chain().focus().toggleOrderedList().run()}
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Numbered list"
             >
