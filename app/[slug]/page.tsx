@@ -8,10 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useRealtimeNoteSocket } from "@/hooks/use-realtime-note-socket"
-import { ImageGallery } from "@/components/image-gallery"
 import { NoteLogin } from "@/components/note-login"
 import { RichTextEditor } from "@/components/rich-text-editor"
-import { Save, Home, Clock, Calendar, ImageIcon } from "lucide-react"
+import { Save, Home, Clock, Calendar } from "lucide-react"
 
 interface Note {
   id: string
@@ -34,6 +33,30 @@ interface Note {
 
 interface PageProps {
   params: Promise<{ slug: string }>
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const { slug } = await params
+  
+  return {
+    title: `${slug} - Minipad`,
+    description: `Edit and collaborate on the "${slug}" note with Minipad. Real-time sync, rich text editing, and secure note sharing.`,
+    openGraph: {
+      title: `${slug} - Minipad Note`,
+      description: `Collaborate on the "${slug}" note with real-time sync and rich text editing.`,
+      url: `https://minipad.app/${slug}`,
+      siteName: "Minipad",
+      type: "article",
+    },
+    twitter: {
+      card: "summary",
+      title: `${slug} - Minipad Note`,
+      description: `Edit and collaborate on the "${slug}" note with Minipad.`,
+    },
+    alternates: {
+      canonical: `/${slug}`,
+    },
+  }
 }
 
 export default function NotePage({ params }: PageProps) {
@@ -422,7 +445,7 @@ export default function NotePage({ params }: PageProps) {
             placeholder="Start writing your note..."
             slug={slug}
             secret={secret}
-            className="min-h-[500px]"
+className=""
           />
         </section>
 
@@ -442,24 +465,12 @@ export default function NotePage({ params }: PageProps) {
                 <Clock className="h-3 w-3" aria-hidden="true" />
                 <span>Updated <time dateTime={note.updatedAt}>{new Date(note.updatedAt).toLocaleDateString()}</time></span>
               </div>
-              {note.images.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="h-3 w-3" aria-hidden="true" />
-                  <span>{note.images.length} image{note.images.length !== 1 ? 's' : ''}</span>
-                </div>
-              )}
             </div>
             <div className="text-muted-foreground/70" role="note" aria-label="Keyboard shortcuts and tips">
               Press <kbd className="px-1.5 py-0.5 text-xs bg-muted/50 rounded">⌘S</kbd> to save • Auto-save after 1.5s • Paste images directly
             </div>
           </div>
 
-          {/* Image Gallery */}
-          {note.images.length > 0 && (
-            <section aria-label="Attached images" className="animate-in fade-in duration-700 delay-700">
-              <ImageGallery images={note.images} />
-            </section>
-          )}
         </footer>
       </main>
     </div>

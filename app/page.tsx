@@ -17,6 +17,33 @@ export default function HomePage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Minipad",
+    "url": "https://minipad.app",
+    "description": "Simple online notepad with real-time collaboration, rich text editing, and secure note sharing",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Rich text editing",
+      "Real-time collaboration",
+      "Password protection",
+      "Image uploads",
+      "Auto-save",
+      "Cross-device sync"
+    ],
+    "author": {
+      "@type": "Organization",
+      "name": "Minipad"
+    }
+  }
+
   const handleCreate = async () => {
     setIsLoading(true)
     try {
@@ -76,12 +103,17 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4 animate-in fade-in duration-500">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4 animate-in fade-in duration-500">
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center space-y-2 animate-in slide-in-from-top-4 duration-700">
-          <h1 className="text-4xl font-bold tracking-tight">Local Notepad</h1>
-          <p className="text-muted-foreground">Create rich text notes with real-time collaboration</p>
+          <h1 className="text-4xl font-bold tracking-tight">Minipad</h1>
+          <p className="text-muted-foreground">Simple online notepad with real-time collaboration</p>
         </div>
 
         {/* Quick Actions */}
@@ -98,7 +130,7 @@ export default function HomePage() {
                   onKeyDown={handleKeyDown}
                   className="h-11 border-border/50 focus:border-primary transition-colors"
                 />
-                <p className="text-xs text-muted-foreground">Letters, numbers, hyphens, and underscores only</p>
+                <p className="text-xs text-muted-foreground">Use the same name to create new or open existing notes</p>
               </div>
 
               <div className="space-y-2">
@@ -147,11 +179,12 @@ export default function HomePage() {
                 onClick={handleOpen} 
                 variant="outline" 
                 disabled={!slug.trim() || isLoading} 
-                className="w-full h-11 font-medium border-border/50 hover:border-primary transition-all duration-200 focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                className="w-full h-11 font-medium border-border/50 hover:border-primary transition-all duration-200 focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
                 size="lg"
-                aria-label="Open existing note with the name you entered"
+                aria-label={!slug.trim() ? "Enter a note name above to open existing note" : "Open existing note with the name you entered"}
+                title={!slug.trim() ? "Enter a note name above to open existing note" : "Open existing note"}
               >
-                Open Existing Note
+                {!slug.trim() ? "Enter Note Name to Open" : "Open Existing Note"}
               </Button>
             </div>
 
@@ -180,5 +213,6 @@ export default function HomePage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

@@ -10,7 +10,10 @@
       "Bash(grep:*)",
       "Bash(docker build:*)",
       "Bash(docker run:*)",
-      "Bash(docker rmi:*)"
+      "Bash(docker rmi:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

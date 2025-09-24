@@ -155,7 +155,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm max-w-none focus:outline-none min-h-[300px] p-3 border border-border rounded-md',
+          'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4 border-0 rounded-none bg-transparent',
       },
     },
   })
@@ -256,13 +256,15 @@ export function RichTextEditor({
   return (
     <div className={className}>
       {editable && (
-        <div className="border border-border rounded-t-md p-2 bg-muted/30">
+        <div className="border-b border-border/30 px-4 py-2 bg-background/50 backdrop-blur">
           <div className="flex flex-wrap items-center gap-1">
             <Button
               variant={editor.isActive('bold') ? 'default' : 'ghost'}
               size="sm"
               onClick={toggleBold}
               disabled={!editor.can().chain().focus().toggleBold().run()}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Bold text"
             >
               <Bold className="h-4 w-4" />
             </Button>
@@ -271,6 +273,8 @@ export function RichTextEditor({
               size="sm"
               onClick={toggleItalic}
               disabled={!editor.can().chain().focus().toggleItalic().run()}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Italic text"
             >
               <Italic className="h-4 w-4" />
             </Button>
@@ -279,6 +283,8 @@ export function RichTextEditor({
               size="sm"
               onClick={toggleStrike}
               disabled={!editor.can().chain().focus().toggleStrike().run()}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Strikethrough text"
             >
               <Strikethrough className="h-4 w-4" />
             </Button>
@@ -287,6 +293,8 @@ export function RichTextEditor({
               size="sm"
               onClick={toggleCode}
               disabled={!editor.can().chain().focus().toggleCode().run()}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Inline code"
             >
               <Code className="h-4 w-4" />
             </Button>
@@ -299,6 +307,8 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH1}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Heading 1"
             >
               <Heading1 className="h-4 w-4" />
             </Button>
@@ -308,6 +318,8 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH2}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Heading 2"
             >
               <Heading2 className="h-4 w-4" />
             </Button>
@@ -317,6 +329,8 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH3}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Heading 3"
             >
               <Heading3 className="h-4 w-4" />
             </Button>
@@ -327,6 +341,8 @@ export function RichTextEditor({
               variant={editor.isActive('bulletList') ? 'default' : 'ghost'}
               size="sm"
               onClick={toggleBulletList}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Bullet list"
             >
               <List className="h-4 w-4" />
             </Button>
@@ -334,6 +350,8 @@ export function RichTextEditor({
               variant={editor.isActive('orderedList') ? 'default' : 'ghost'}
               size="sm"
               onClick={toggleOrderedList}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Numbered list"
             >
               <ListOrdered className="h-4 w-4" />
             </Button>
@@ -341,6 +359,8 @@ export function RichTextEditor({
               variant={editor.isActive('blockquote') ? 'default' : 'ghost'}
               size="sm"
               onClick={toggleBlockquote}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
+              aria-label="Blockquote"
             >
               <Quote className="h-4 w-4" />
             </Button>
@@ -352,6 +372,8 @@ export function RichTextEditor({
               size="sm"
               onClick={addImage}
               disabled={isUploadingImage}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              aria-label="Insert image"
             >
               <ImageIcon className="h-4 w-4" />
             </Button>
@@ -363,6 +385,8 @@ export function RichTextEditor({
               size="sm"
               onClick={undo}
               disabled={!editor.can().chain().focus().undo().run()}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20 disabled:opacity-30"
+              aria-label="Undo"
             >
               <Undo className="h-4 w-4" />
             </Button>
@@ -371,31 +395,33 @@ export function RichTextEditor({
               size="sm"
               onClick={redo}
               disabled={!editor.can().chain().focus().redo().run()}
+              className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20 disabled:opacity-30"
+              aria-label="Redo"
             >
               <Redo className="h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
-      <EditorContent
-        editor={editor}
-        className={`${
-          editable ? 'border-t-0 rounded-t-none' : ''
-        } border border-border rounded-md`}
-        data-testid="rich-text-editor"
-      />
+      <div className="relative">
+        <EditorContent
+          editor={editor}
+          className="border-0 rounded-none focus-within:bg-background/50 transition-colors duration-200"
+          data-testid="rich-text-editor"
+        />
+      </div>
       {editable && (
-        <div className="text-xs text-muted-foreground p-2 border-t border-border bg-muted/30 rounded-b-md">
+        <div className="text-xs text-muted-foreground/80 px-4 py-2 border-t border-border/20 bg-muted/20">
           {isUploadingImage ? (
-            <span className="flex items-center gap-2">
-              <div className="h-3 w-3 border border-current border-t-transparent rounded-full animate-spin" />
+            <span className="flex items-center gap-2 text-blue-600">
+              <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
               Uploading image...
             </span>
           ) : (
-            <>
-              Paste images directly into the editor • Right-click images to
-              copy/resize • Click image + Delete to remove • Use toolbar for formatting
-            </>
+            <div className="flex items-center justify-between">
+              <span>Paste images directly • Right-click images to copy/resize • Press Del to remove images</span>
+              <span className="text-muted-foreground/60">Use ⌘+formatting keys for quick styling</span>
+            </div>
           )}
         </div>
       )}
