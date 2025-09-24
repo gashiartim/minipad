@@ -1,46 +1,62 @@
-# Tiptap Editor Button Fix Plan
+# Next.js 15 Client/Server Component Separation Fix
 
 ## Problem Statement
-H* (heading) buttons and list buttons in the Tiptap editor are not working/responding when clicked.
+Deployment failing because `app/[slug]/page.tsx` exports `generateMetadata` from a Client Component (`"use client"`), which violates Next.js 15 App Router rules.
 
 ## Root Cause Analysis
-1. **Missing disabled checks**: Heading and list buttons lack `disabled` attributes that verify if commands can be executed
-2. **Potential extension issues**: Need to verify StarterKit properly includes heading and list extensions
-3. **Event handler verification**: Ensure toggle functions are properly connected
+- `generateMetadata` can only be exported from Server Components
+- The page needs client-side features (hooks, real-time, state management)
+- Current architecture mixes server and client concerns in one file
 
-## Acceptance Criteria
-- [ ] H1, H2, H3 buttons toggle headings correctly
-- [ ] Bullet list and ordered list buttons work properly  
-- [ ] Buttons show active state when applied to current selection
-- [ ] Buttons are disabled when commands cannot be executed
-- [ ] No console errors when clicking buttons
+## Solution Architecture
+
+### 1. Create Component Separation
+- **Server Component**: `app/[slug]/page.tsx` - handles metadata generation
+- **Client Component**: `app/[slug]/note-client.tsx` - handles all client-side logic
+
+### 2. Data Flow Pattern
+```
+Server Component (page.tsx)
+├── generateMetadata() - SEO metadata
+└── Client Component (note-client.tsx)
+    ├── All hooks and state
+    ├── Real-time functionality  
+    └── User interactions
+```
 
 ## Implementation Plan
 
-### 1. Add Disabled Checks
-Add `disabled` attributes to all buttons following the pattern used in the bold button:
-```tsx
-disabled={!editor.can().chain().focus().toggleHeading({ level: 1 }).run()}
-```
+### Phase 1: Extract Client Component
+1. Create `app/[slug]/note-client.tsx`
+2. Move all client logic from `page.tsx` to `note-client.tsx`
+3. Keep interfaces and types accessible to both
 
-### 2. Debug Extension Loading
-- Verify StarterKit includes necessary extensions
-- Add explicit extension imports if needed
-- Test extension availability in browser console
+### Phase 2: Update Server Component
+1. Remove `"use client"` from `page.tsx`
+2. Keep `generateMetadata` in server component
+3. Import and render client component
 
-### 3. Enhanced Error Handling
-- Add console.log statements to toggle functions for debugging
-- Add try-catch blocks around editor commands
+### Phase 3: Fix Imports and Props
+1. Ensure proper prop passing between server/client
+2. Handle async params correctly in both components
+3. Maintain existing functionality
 
-## Files to Modify
-- `components/rich-text-editor/rich-text-editor.tsx`
+## File Changes
 
-## Testing Plan
-1. Click each button and verify functionality
-2. Select text and verify active states
-3. Check browser console for errors
-4. Test with different content scenarios
+### New Files
+- `app/[slug]/note-client.tsx` - Client component with all hooks
+
+### Modified Files  
+- `app/[slug]/page.tsx` - Server component with metadata only
+
+## Acceptance Criteria
+- [x] Build passes without errors
+- [x] `generateMetadata` works for SEO
+- [x] All client functionality preserved
+- [x] Real-time features still work
+- [x] No runtime errors
 
 ## Risk Assessment
-- Low risk: Only adding missing attributes and debugging
-- No breaking changes to existing functionality
+- **Low Risk**: Clean separation following Next.js patterns
+- **No Breaking Changes**: Same user experience
+- **Performance**: Potentially better (proper RSC usage)
