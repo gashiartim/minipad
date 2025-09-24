@@ -167,7 +167,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4 border-0 rounded-none bg-transparent',
+          'prose prose-sm prose-slate max-w-none focus:outline-none min-h-[200px] p-4 border-0 rounded-none bg-transparent prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-ul:list-disc prose-ol:list-decimal prose-li:ml-4',
       },
     },
   })
