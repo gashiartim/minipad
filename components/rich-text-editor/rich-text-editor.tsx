@@ -4,15 +4,24 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Typography from '@tiptap/extension-typography'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { createLowlight } from 'lowlight'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Bold,
   Italic,
   Strikethrough,
   Code,
+  Code2,
   Heading1,
   Heading2,
   Heading3,
@@ -22,6 +31,7 @@ import {
   Undo,
   Redo,
   ImageIcon,
+  ChevronDown,
 } from 'lucide-react'
 import {
   uploadImageFromPaste,
@@ -30,6 +40,81 @@ import {
   createEnhancedImageExtension,
   createPasteExtension,
 } from './rich-text-editor.utils'
+
+// Register common programming languages for syntax highlighting
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import python from 'highlight.js/lib/languages/python'
+import java from 'highlight.js/lib/languages/java'
+import cpp from 'highlight.js/lib/languages/cpp'
+import c from 'highlight.js/lib/languages/c'
+import csharp from 'highlight.js/lib/languages/csharp'
+import php from 'highlight.js/lib/languages/php'
+import ruby from 'highlight.js/lib/languages/ruby'
+import go from 'highlight.js/lib/languages/go'
+import rust from 'highlight.js/lib/languages/rust'
+import swift from 'highlight.js/lib/languages/swift'
+import kotlin from 'highlight.js/lib/languages/kotlin'
+import xml from 'highlight.js/lib/languages/xml'
+import css from 'highlight.js/lib/languages/css'
+import scss from 'highlight.js/lib/languages/scss'
+import json from 'highlight.js/lib/languages/json'
+import yaml from 'highlight.js/lib/languages/yaml'
+import markdown from 'highlight.js/lib/languages/markdown'
+import bash from 'highlight.js/lib/languages/bash'
+import sql from 'highlight.js/lib/languages/sql'
+
+// Create lowlight instance and register languages
+const lowlight = createLowlight()
+lowlight.register({
+  javascript,
+  typescript,
+  python,
+  java,
+  cpp,
+  c,
+  csharp,
+  php,
+  ruby,
+  go,
+  rust,
+  swift,
+  kotlin,
+  html: xml,
+  css,
+  scss,
+  json,
+  yaml,
+  markdown,
+  bash,
+  sql,
+})
+
+// Language options for the dropdown
+const LANGUAGE_OPTIONS = [
+  { value: null, label: 'Plain Text' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'java', label: 'Java' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'c', label: 'C' },
+  { value: 'csharp', label: 'C#' },
+  { value: 'php', label: 'PHP' },
+  { value: 'ruby', label: 'Ruby' },
+  { value: 'go', label: 'Go' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'swift', label: 'Swift' },
+  { value: 'kotlin', label: 'Kotlin' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'scss', label: 'SCSS' },
+  { value: 'json', label: 'JSON' },
+  { value: 'yaml', label: 'YAML' },
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'bash', label: 'Bash' },
+  { value: 'sql', label: 'SQL' },
+]
 
 export interface RichTextEditorProps {
   content: string
@@ -145,6 +230,11 @@ export function RichTextEditor({
           keepMarks: true,
           keepAttributes: false,
         },
+        codeBlock: false, // Disable default code block to use CodeBlockLowlight
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+        defaultLanguage: null,
       }),
       EnhancedImage,
       Placeholder.configure({
@@ -217,6 +307,20 @@ export function RichTextEditor({
   )
   const toggleBlockquote = useCallback(
     () => editor?.chain().focus().toggleBlockquote().run(),
+    [editor]
+  )
+  const toggleCodeBlock = useCallback(
+    () => editor?.chain().focus().toggleCodeBlock().run(),
+    [editor]
+  )
+  const setCodeBlockLanguage = useCallback(
+    (language: string | null) => {
+      if (language) {
+        editor?.chain().focus().setCodeBlock({ language }).run()
+      } else {
+        editor?.chain().focus().setCodeBlock().run()
+      }
+    },
     [editor]
   )
   const undo = useCallback(() => editor?.chain().focus().undo().run(), [editor])
@@ -382,6 +486,42 @@ export function RichTextEditor({
               <Quote className="h-4 w-4" />
             </Button>
 
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={editor.isActive('codeBlock') ? 'default' : 'ghost'}
+                  size="sm"
+                  className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20 flex items-center gap-1"
+                  aria-label="Code block"
+                >
+                  <Code2 className="h-4 w-4" />
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48 max-h-64 overflow-y-auto">
+                {!editor.isActive('codeBlock') ? (
+                  <DropdownMenuItem
+                    onClick={toggleCodeBlock}
+                    className="cursor-pointer"
+                  >
+                    Insert Code Block
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    {LANGUAGE_OPTIONS.map((lang) => (
+                      <DropdownMenuItem
+                        key={lang.value || 'plain'}
+                        onClick={() => setCodeBlockLanguage(lang.value)}
+                        className="cursor-pointer"
+                      >
+                        {lang.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Separator orientation="vertical" className="h-6" />
 
             <Button
@@ -436,7 +576,7 @@ export function RichTextEditor({
             </span>
           ) : (
             <div className="flex items-center justify-between">
-              <span>Paste images directly • Right-click images to copy/resize • Press Del to remove images</span>
+              <span>Paste images directly • Code auto-detects language • Right-click images to copy/resize</span>
               <span className="text-muted-foreground/60">Use ⌘+formatting keys for quick styling</span>
             </div>
           )}

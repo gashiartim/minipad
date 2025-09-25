@@ -335,7 +335,106 @@ export const createEnhancedImageExtension = (
   })
 }
 
-// Custom paste extension for handling image uploads
+// Helper function to detect if text is likely code
+function isLikelyCode(text: string): { isCode: boolean; language: string | null } {
+  // Remove leading/trailing whitespace for analysis
+  const trimmedText = text.trim()
+  
+  // Too short to be meaningful code
+  if (trimmedText.length < 10) {
+    return { isCode: false, language: null }
+  }
+  
+  // Check for common code patterns
+  const codeIndicators = [
+    // JavaScript/TypeScript patterns
+    /^(import|export|const|let|var|function|class|interface|type)\s/m,
+    /=>\s*\{/,
+    /console\.(log|error|warn)/,
+    /\.then\s*\(/,
+    /Promise\./,
+    
+    // Python patterns
+    /^(def|class|import|from|if __name__|print\s*\()/m,
+    /:\s*\n\s{4,}/,
+    
+    // Java patterns
+    /public\s+(static\s+)?void\s+main/,
+    /public\s+class\s+\w+/,
+    /System\.out\.print/,
+    
+    // C/C++ patterns
+    /#include\s*<\w+>/,
+    /int\s+main\s*\(/,
+    /printf\s*\(/,
+    
+    // HTML patterns
+    /^<(!DOCTYPE|html|head|body|div|span|p|a|img)/im,
+    /<\/\w+>/,
+    
+    // CSS patterns
+    /\{\s*\n\s*[\w-]+\s*:\s*[^;]+;/,
+    /^[\w\-\.#]+\s*\{/m,
+    
+    // SQL patterns
+    /^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s/im,
+    
+    // Shell/Bash patterns
+    /^(#!\/bin\/|sudo|npm|git|docker|cd|ls|mkdir)/m,
+    
+    // JSON pattern
+    /^\s*\{\s*"[\w-]+"\s*:\s*["\{\[]]/,
+  ]
+  
+  // Language detection patterns
+  const languagePatterns = [
+    { pattern: /^(import|export|const|let|var|function|class)\s/m, language: 'javascript' },
+    { pattern: /(interface|type\s+\w+\s*=|as\s+\w+)/m, language: 'typescript' },
+    { pattern: /^(def|class|import|from|if __name__)/m, language: 'python' },
+    { pattern: /public\s+(static\s+)?void\s+main/m, language: 'java' },
+    { pattern: /#include\s*<\w+>/m, language: 'cpp' },
+    { pattern: /^<(!DOCTYPE|html|head|body)/im, language: 'html' },
+    { pattern: /\{\s*\n\s*[\w-]+\s*:\s*[^;]+;/m, language: 'css' },
+    { pattern: /^(SELECT|INSERT|UPDATE|DELETE|CREATE)/im, language: 'sql' },
+    { pattern: /^(#!\/bin\/|npm|git|docker)\s/m, language: 'bash' },
+    { pattern: /^\s*\{\s*"[\w-]+"\s*:/m, language: 'json' },
+  ]
+  
+  // Check if text contains code patterns
+  const hasCodePatterns = codeIndicators.some(pattern => pattern.test(trimmedText))
+  
+  // Additional heuristics
+  const lines = trimmedText.split('\n')
+  const hasIndentation = lines.some(line => /^\s{2,}/.test(line))
+  const hasBraces = /[\{\}]/.test(trimmedText)
+  const hasSemicolons = trimmedText.split(';').length > 2
+  const hasSpecialChars = /[{}()[\]<>=&|!]/.test(trimmedText)
+  
+  const codeScore = [
+    hasCodePatterns ? 3 : 0,
+    hasIndentation ? 1 : 0,
+    hasBraces ? 1 : 0,
+    hasSemicolons ? 1 : 0,
+    hasSpecialChars ? 1 : 0,
+  ].reduce((a, b) => a + b, 0)
+  
+  const isCode = codeScore >= 2
+  
+  // Detect language if it's code
+  let language = null
+  if (isCode) {
+    for (const { pattern, language: lang } of languagePatterns) {
+      if (pattern.test(trimmedText)) {
+        language = lang
+        break
+      }
+    }
+  }
+  
+  return { isCode, language }
+}
+
+// Custom paste extension for handling image uploads and code formatting
 export const createPasteExtension = (
   slug: string,
   secret: string | undefined,
@@ -355,6 +454,7 @@ export const createPasteExtension = (
                 event.clipboardData || (window as any).clipboardData
               if (!clipboardData) return false
 
+              // Check for images first
               const items = Array.from(
                 clipboardData.items
               ) as DataTransferItem[]
@@ -362,48 +462,72 @@ export const createPasteExtension = (
                 item.type.startsWith('image/')
               )
 
-              if (imageItems.length === 0) return false
+              if (imageItems.length > 0) {
+                // Handle multiple images
+                imageItems.forEach(async (item) => {
+                  const file = item.getAsFile()
+                  if (!file) return
 
-              // Handle multiple images
-              imageItems.forEach(async (item) => {
-                const file = item.getAsFile()
-                if (!file) return
+                  onUploadStart()
 
-                onUploadStart()
+                  try {
+                    const uploadedImage = await uploadImageFromPaste(
+                      file,
+                      slug,
+                      secret
+                    )
 
-                try {
-                  const uploadedImage = await uploadImageFromPaste(
-                    file,
-                    slug,
-                    secret
-                  )
+                    // Insert the uploaded image into the editor
+                    const { tr } = view.state
+                    const imageNode = view.state.schema.nodes.image?.create({
+                      src: `/i/${uploadedImage.path}`,
+                      alt: file.name,
+                    })
 
-                  // Insert the uploaded image into the editor
-                  const { tr } = view.state
-                  const imageNode = view.state.schema.nodes.image?.create({
-                    src: `/i/${uploadedImage.path}`,
-                    alt: file.name,
-                  })
+                    if (imageNode) {
+                      const insertPos = view.state.selection.from
+                      tr.insert(insertPos, imageNode)
+                      view.dispatch(tr)
+                    }
 
-                  if (imageNode) {
-                    const insertPos = view.state.selection.from
-                    tr.insert(insertPos, imageNode)
-                    view.dispatch(tr)
+                    onUploadComplete(true, 'Image pasted successfully')
+                  } catch (error) {
+                    console.error('Image upload failed:', error)
+                    onUploadComplete(
+                      false,
+                      error instanceof Error
+                        ? error.message
+                        : 'Failed to upload image'
+                    )
                   }
+                })
 
-                  onUploadComplete(true, 'Image pasted successfully')
-                } catch (error) {
-                  console.error('Image upload failed:', error)
-                  onUploadComplete(
-                    false,
-                    error instanceof Error
-                      ? error.message
-                      : 'Failed to upload image'
+                return true // Prevent default paste behavior
+              }
+
+              // Check for text that might be code
+              const text = clipboardData.getData('text/plain')
+              if (text && text.length > 0) {
+                const { isCode, language } = isLikelyCode(text)
+                
+                if (isCode) {
+                  // Create a code block with the detected language
+                  const { tr } = view.state
+                  const codeBlockNode = view.state.schema.nodes.codeBlock?.create(
+                    language ? { language } : {},
+                    view.state.schema.text(text)
                   )
+                  
+                  if (codeBlockNode) {
+                    const insertPos = view.state.selection.from
+                    tr.replaceWith(insertPos, insertPos, codeBlockNode)
+                    view.dispatch(tr)
+                    return true // Prevent default paste behavior
+                  }
                 }
-              })
+              }
 
-              return true // Prevent default paste behavior
+              return false // Allow default paste behavior for non-code text
             },
           },
         }),

@@ -13,7 +13,8 @@
       "Bash(docker rmi:*)",
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(pnpm remove:*)"
     ],
     "deny": [],
     "ask": []
