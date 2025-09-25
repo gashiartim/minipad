@@ -6,7 +6,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import Typography from '@tiptap/extension-typography'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { createLowlight } from 'lowlight'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
@@ -40,81 +40,11 @@ import {
   createEnhancedImageExtension,
   createPasteExtension,
 } from './rich-text-editor.utils'
+import { TIMING } from '@/lib/constants'
+import { ErrorBoundary } from '@/components/error-boundary'
 
-// Register common programming languages for syntax highlighting
-import javascript from 'highlight.js/lib/languages/javascript'
-import typescript from 'highlight.js/lib/languages/typescript'
-import python from 'highlight.js/lib/languages/python'
-import java from 'highlight.js/lib/languages/java'
-import cpp from 'highlight.js/lib/languages/cpp'
-import c from 'highlight.js/lib/languages/c'
-import csharp from 'highlight.js/lib/languages/csharp'
-import php from 'highlight.js/lib/languages/php'
-import ruby from 'highlight.js/lib/languages/ruby'
-import go from 'highlight.js/lib/languages/go'
-import rust from 'highlight.js/lib/languages/rust'
-import swift from 'highlight.js/lib/languages/swift'
-import kotlin from 'highlight.js/lib/languages/kotlin'
-import xml from 'highlight.js/lib/languages/xml'
-import css from 'highlight.js/lib/languages/css'
-import scss from 'highlight.js/lib/languages/scss'
-import json from 'highlight.js/lib/languages/json'
-import yaml from 'highlight.js/lib/languages/yaml'
-import markdown from 'highlight.js/lib/languages/markdown'
-import bash from 'highlight.js/lib/languages/bash'
-import sql from 'highlight.js/lib/languages/sql'
-
-// Create lowlight instance and register languages
-const lowlight = createLowlight()
-lowlight.register({
-  javascript,
-  typescript,
-  python,
-  java,
-  cpp,
-  c,
-  csharp,
-  php,
-  ruby,
-  go,
-  rust,
-  swift,
-  kotlin,
-  html: xml,
-  css,
-  scss,
-  json,
-  yaml,
-  markdown,
-  bash,
-  sql,
-})
-
-// Language options for the dropdown
-const LANGUAGE_OPTIONS = [
-  { value: null, label: 'Plain Text' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'typescript', label: 'TypeScript' },
-  { value: 'python', label: 'Python' },
-  { value: 'java', label: 'Java' },
-  { value: 'cpp', label: 'C++' },
-  { value: 'c', label: 'C' },
-  { value: 'csharp', label: 'C#' },
-  { value: 'php', label: 'PHP' },
-  { value: 'ruby', label: 'Ruby' },
-  { value: 'go', label: 'Go' },
-  { value: 'rust', label: 'Rust' },
-  { value: 'swift', label: 'Swift' },
-  { value: 'kotlin', label: 'Kotlin' },
-  { value: 'html', label: 'HTML' },
-  { value: 'css', label: 'CSS' },
-  { value: 'scss', label: 'SCSS' },
-  { value: 'json', label: 'JSON' },
-  { value: 'yaml', label: 'YAML' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'bash', label: 'Bash' },
-  { value: 'sql', label: 'SQL' },
-]
+// Import lazy-loaded syntax highlighting
+import { lowlight, loadLanguage, LANGUAGE_OPTIONS } from '@/lib/syntax-highlighting'
 
 export interface RichTextEditorProps {
   content: string
@@ -185,10 +115,10 @@ export function RichTextEditor({
     [toast]
   )
 
-  // Create enhanced image extension
-  const EnhancedImage = createEnhancedImageExtension(
-    handleImageCopy,
-    handleImageDownload
+  // Create enhanced image extension (memoized)
+  const EnhancedImage = useMemo(
+    () => createEnhancedImageExtension(handleImageCopy, handleImageDownload),
+    [handleImageCopy, handleImageDownload]
   )
 
   // Handle upload start
@@ -216,12 +146,10 @@ export function RichTextEditor({
     [toast]
   )
 
-  // Create paste extension
-  const pasteExtension = createPasteExtension(
-    slug,
-    secret,
-    handleUploadStart,
-    handleUploadComplete
+  // Create paste extension (memoized)
+  const pasteExtension = useMemo(
+    () => createPasteExtension(slug, secret, handleUploadStart, handleUploadComplete),
+    [slug, secret, handleUploadStart, handleUploadComplete]
   )
 
   const editor = useEditor({
@@ -270,9 +198,17 @@ export function RichTextEditor({
     },
   })
 
-  // Update content when prop changes (for real-time sync)
+  // Update content when prop changes (for real-time sync) with deep equality check
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    if (!editor) return
+    
+    const currentContent = editor.getHTML()
+    // Normalize content for comparison (remove extra whitespace)
+    const normalizeContent = (html: string) => html.replace(/\s+/g, ' ').trim()
+    const normalizedCurrent = normalizeContent(currentContent)
+    const normalizedNew = normalizeContent(content)
+    
+    if (normalizedCurrent !== normalizedNew) {
       editor.commands.setContent(content, false)
     }
   }, [content, editor])
@@ -322,8 +258,10 @@ export function RichTextEditor({
     [editor]
   )
   const setCodeBlockLanguage = useCallback(
-    (language: string | null) => {
+    async (language: string | null) => {
       if (language) {
+        // Load the language dynamically if needed
+        await loadLanguage(language)
         editor?.chain().focus().setCodeBlock({ language }).run()
       } else {
         editor?.chain().focus().setCodeBlock().run()
@@ -378,10 +316,11 @@ export function RichTextEditor({
   }
 
   return (
-    <div className={className}>
-      {editable && (
-        <div className="border-b border-border/30 px-4 py-2 bg-background/50 backdrop-blur">
-          <div className="flex flex-wrap items-center gap-1">
+    <ErrorBoundary>
+      <div className={className}>
+        {editable && (
+          <div className="border-b border-border/30 px-4 py-2 bg-background/50 backdrop-blur">
+            <div className="flex flex-wrap items-center gap-1">
             <Button
               variant={editor.isActive('bold') ? 'default' : 'ghost'}
               size="sm"
@@ -603,7 +542,8 @@ export function RichTextEditor({
             </div>
           )}
         </div>
-      )}
-    </div>
+        )}
+      </div>
+    </ErrorBoundary>
   )
 }

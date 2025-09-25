@@ -1,13 +1,21 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Image from '@tiptap/extension-image'
+import { validateImage, validatePastedContent } from '@/lib/validation'
+import { TIMING, CODE_DETECTION, ERROR_MESSAGES } from '@/lib/constants'
 
-// Custom image upload function
+// Custom image upload function with validation
 export async function uploadImageFromPaste(
   file: File,
   slug: string,
   secret?: string
 ) {
+  // Validate the image before upload
+  const validation = await validateImage(file)
+  if (!validation.isValid) {
+    throw new Error(validation.error || ERROR_MESSAGES.INVALID_FILE_TYPE)
+  }
+
   const formData = new FormData()
   formData.append('file', file)
   if (secret) {
@@ -21,14 +29,14 @@ export async function uploadImageFromPaste(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    let errorMessage = 'Failed to upload image'
+    let errorMessage = ERROR_MESSAGES.UPLOAD_FAILED
 
     if (response.status === 403) {
-      errorMessage = 'Access denied - check your secret'
+      errorMessage = ERROR_MESSAGES.AUTH_EXPIRED
     } else if (response.status === 413) {
-      errorMessage = 'File too large'
+      errorMessage = ERROR_MESSAGES.FILE_TOO_LARGE
     } else if (response.status === 415) {
-      errorMessage = 'Invalid file type'
+      errorMessage = ERROR_MESSAGES.INVALID_FILE_TYPE
     } else if (response.status === 429) {
       errorMessage = 'Too many requests - please wait'
     } else if (errorData.error) {
@@ -41,14 +49,29 @@ export async function uploadImageFromPaste(
   return await response.json()
 }
 
-// Helper function to copy image to clipboard
-export async function copyImageToClipboard(imageSrc: string) {
+// Helper function to copy image to clipboard with validation
+export async function copyImageToClipboard(imageSrc: string): Promise<boolean> {
   try {
-    const response = await fetch(imageSrc)
+    // Validate URL to prevent potential security issues
+    const url = new URL(imageSrc, window.location.origin)
+    if (!url.pathname.startsWith('/i/')) {
+      throw new Error('Invalid image source')
+    }
+
+    const response = await fetch(url.toString())
+    if (!response.ok) {
+      throw new Error('Failed to fetch image')
+    }
+    
     const blob = await response.blob()
+    
+    // Validate blob size
+    if (blob.size > 10 * 1024 * 1024) { // 10MB limit
+      throw new Error('Image too large to copy')
+    }
 
     if (navigator.clipboard && 'ClipboardItem' in window) {
-      const clipboardItem = new (window as any).ClipboardItem({
+      const clipboardItem = new ClipboardItem({
         [blob.type]: blob,
       })
       await navigator.clipboard.write([clipboardItem])
@@ -59,7 +82,7 @@ export async function copyImageToClipboard(imageSrc: string) {
       const ctx = canvas.getContext('2d')
       const img = new window.Image()
 
-      return new Promise((resolve) => {
+      return new Promise<boolean>((resolve) => {
         img.onload = () => {
           canvas.width = img.width
           canvas.height = img.height
@@ -68,7 +91,7 @@ export async function copyImageToClipboard(imageSrc: string) {
           canvas.toBlob((blob) => {
             if (blob) {
               if ('ClipboardItem' in window) {
-                const item = new (window as any).ClipboardItem({
+                const item = new ClipboardItem({
                   [blob.type]: blob,
                 })
                 navigator.clipboard.write([item]).then(() => resolve(true))
@@ -97,6 +120,60 @@ export function downloadImage(imageSrc: string, filename: string) {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+}
+
+// Helper function to create resize handles
+function createResizeHandle(position: string): HTMLDivElement {
+  const handle = document.createElement('div')
+  handle.className = `absolute w-2 h-2 bg-blue-500 border border-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${position}`
+  handle.style.pointerEvents = 'auto'
+  return handle
+}
+
+// Helper function to create context menu
+function createContextMenu(
+  x: number,
+  y: number,
+  imageSrc: string,
+  imageAlt: string,
+  onCopy: (src: string) => Promise<void>,
+  onDownload: (src: string, filename: string) => void,
+  onDelete: () => void
+): HTMLDivElement {
+  const contextMenu = document.createElement('div')
+  contextMenu.className = 'fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50'
+  contextMenu.style.left = `${x}px`
+  contextMenu.style.top = `${y}px`
+
+  const copyItem = document.createElement('div')
+  copyItem.className = 'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
+  copyItem.innerHTML = '<span>📋</span> Copy Image'
+  copyItem.addEventListener('click', async () => {
+    await onCopy(imageSrc)
+    document.body.removeChild(contextMenu)
+  })
+
+  const downloadItem = document.createElement('div')
+  downloadItem.className = 'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
+  downloadItem.innerHTML = '<span>💾</span> Download Image'
+  downloadItem.addEventListener('click', () => {
+    onDownload(imageSrc, imageAlt || 'image')
+    document.body.removeChild(contextMenu)
+  })
+
+  const deleteItem = document.createElement('div')
+  deleteItem.className = 'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-red-600'
+  deleteItem.innerHTML = '<span>🗑️</span> Delete Image'
+  deleteItem.addEventListener('click', () => {
+    onDelete()
+    document.body.removeChild(contextMenu)
+  })
+
+  contextMenu.appendChild(copyItem)
+  contextMenu.appendChild(downloadItem)
+  contextMenu.appendChild(deleteItem)
+
+  return contextMenu
 }
 
 // Enhanced image extension with resize and context menu support
@@ -148,30 +225,24 @@ export const createEnhancedImageExtension = (
           'absolute inset-0 pointer-events-none group-hover:pointer-events-auto'
 
         // Create resize handles
-        const createHandle = (position: string) => {
-          const handle = document.createElement('div')
-          handle.className = `absolute w-2 h-2 bg-blue-500 border border-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${position}`
-          handle.style.pointerEvents = 'auto'
-          return handle
-        }
-
         const handles = {
-          se: createHandle('bottom-0 right-0 cursor-se-resize'),
-          sw: createHandle('bottom-0 left-0 cursor-sw-resize'),
-          ne: createHandle('top-0 right-0 cursor-ne-resize'),
-          nw: createHandle('top-0 left-0 cursor-nw-resize'),
+          se: createResizeHandle('bottom-0 right-0 cursor-se-resize'),
+          sw: createResizeHandle('bottom-0 left-0 cursor-sw-resize'),
+          ne: createResizeHandle('top-0 right-0 cursor-ne-resize'),
+          nw: createResizeHandle('top-0 left-0 cursor-nw-resize'),
         }
 
         Object.values(handles).forEach((handle) =>
           resizeHandles.appendChild(handle)
         )
 
-        // Resize functionality
+        // Resize functionality with debouncing
         let isResizing = false
         let startX = 0
         let startY = 0
         let startWidth = 0
         let startHeight = 0
+        let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 
         const startResize = (e: MouseEvent, direction: string) => {
           e.preventDefault()
@@ -229,17 +300,24 @@ export const createEnhancedImageExtension = (
           document.removeEventListener('mousemove', handleResize)
           document.removeEventListener('mouseup', stopResize)
 
-          // Update the node attributes
-          const pos = getPos()
-          if (pos !== undefined) {
-            view.dispatch(
-              view.state.tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                width: img.offsetWidth,
-                height: img.offsetHeight,
-              })
-            )
+          // Clear any pending resize timeout
+          if (resizeTimeout) {
+            clearTimeout(resizeTimeout)
           }
+
+          // Update the node attributes (debounced)
+          resizeTimeout = setTimeout(() => {
+            const pos = getPos()
+            if (pos !== undefined) {
+              view.dispatch(
+                view.state.tr.setNodeMarkup(pos, undefined, {
+                  ...node.attrs,
+                  width: img.offsetWidth,
+                  height: img.offsetHeight,
+                })
+              )
+            }
+          }, TIMING.DEBOUNCE_RESIZE_DELAY)
         }
 
         // Add event listeners to handles
@@ -270,45 +348,21 @@ export const createEnhancedImageExtension = (
         // Context menu
         img.addEventListener('contextmenu', (e) => {
           e.preventDefault()
-          const contextMenu = document.createElement('div')
-          contextMenu.className =
-            'fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50'
-          contextMenu.style.left = `${e.clientX}px`
-          contextMenu.style.top = `${e.clientY}px`
-
-          const copyItem = document.createElement('div')
-          copyItem.className =
-            'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
-          copyItem.innerHTML = '<span>📋</span> Copy Image'
-          copyItem.addEventListener('click', async () => {
-            await onImageCopy(node.attrs.src)
-            document.body.removeChild(contextMenu)
-          })
-
-          const downloadItem = document.createElement('div')
-          downloadItem.className =
-            'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2'
-          downloadItem.innerHTML = '<span>💾</span> Download Image'
-          downloadItem.addEventListener('click', () => {
-            onImageDownload(node.attrs.src, node.attrs.alt || 'image')
-            document.body.removeChild(contextMenu)
-          })
-
-          const deleteItem = document.createElement('div')
-          deleteItem.className =
-            'px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-red-600'
-          deleteItem.innerHTML = '<span>🗑️</span> Delete Image'
-          deleteItem.addEventListener('click', () => {
-            const pos = getPos()
-            if (pos !== undefined) {
-              view.dispatch(view.state.tr.delete(pos, pos + 1))
+          
+          const contextMenu = createContextMenu(
+            e.clientX,
+            e.clientY,
+            node.attrs.src,
+            node.attrs.alt || 'image',
+            onImageCopy,
+            onImageDownload,
+            () => {
+              const pos = getPos()
+              if (pos !== undefined) {
+                view.dispatch(view.state.tr.delete(pos, pos + 1))
+              }
             }
-            document.body.removeChild(contextMenu)
-          })
-
-          contextMenu.appendChild(copyItem)
-          contextMenu.appendChild(downloadItem)
-          contextMenu.appendChild(deleteItem)
+          )
 
           document.body.appendChild(contextMenu)
 
@@ -335,13 +389,19 @@ export const createEnhancedImageExtension = (
   })
 }
 
-// Helper function to detect if text is likely code
+// Helper function to detect if text is likely code with improved validation
 function isLikelyCode(text: string): { isCode: boolean; language: string | null } {
   // Remove leading/trailing whitespace for analysis
   const trimmedText = text.trim()
   
   // Too short to be meaningful code
-  if (trimmedText.length < 10) {
+  if (trimmedText.length < CODE_DETECTION.MIN_LENGTH) {
+    return { isCode: false, language: null }
+  }
+  
+  // Validate content to prevent potential issues
+  const validation = validatePastedContent(trimmedText)
+  if (!validation.isValid) {
     return { isCode: false, language: null }
   }
   
@@ -418,7 +478,7 @@ function isLikelyCode(text: string): { isCode: boolean; language: string | null 
     hasSpecialChars ? 1 : 0,
   ].reduce((a, b) => a + b, 0)
   
-  const isCode = codeScore >= 2
+  const isCode = codeScore >= CODE_DETECTION.SCORE_THRESHOLD
   
   // Detect language if it's code
   let language = null
@@ -434,7 +494,7 @@ function isLikelyCode(text: string): { isCode: boolean; language: string | null 
   return { isCode, language }
 }
 
-// Custom paste extension for handling image uploads and code formatting
+// Custom paste extension with enhanced validation and error handling
 export const createPasteExtension = (
   slug: string,
   secret: string | undefined,
@@ -463,19 +523,30 @@ export const createPasteExtension = (
               )
 
               if (imageItems.length > 0) {
-                // Handle multiple images
-                imageItems.forEach(async (item) => {
-                  const file = item.getAsFile()
-                  if (!file) return
+                // Limit number of simultaneous uploads
+                const maxUploads = Math.min(imageItems.length, 5)
+                const uploadPromises: Promise<void>[] = []
 
-                  onUploadStart()
+                for (let i = 0; i < maxUploads; i++) {
+                  const item = imageItems[i]
+                  const uploadPromise = (async () => {
+                    const file = item.getAsFile()
+                    if (!file) return
 
-                  try {
-                    const uploadedImage = await uploadImageFromPaste(
-                      file,
-                      slug,
-                      secret
-                    )
+                    onUploadStart()
+
+                    try {
+                      // Validate file before upload
+                      const validation = await validateImage(file)
+                      if (!validation.isValid) {
+                        throw new Error(validation.error || ERROR_MESSAGES.INVALID_FILE_TYPE)
+                      }
+
+                      const uploadedImage = await uploadImageFromPaste(
+                        file,
+                        slug,
+                        secret
+                      )
 
                     // Insert the uploaded image into the editor
                     const { tr } = view.state
@@ -490,17 +561,22 @@ export const createPasteExtension = (
                       view.dispatch(tr)
                     }
 
-                    onUploadComplete(true, 'Image pasted successfully')
-                  } catch (error) {
-                    console.error('Image upload failed:', error)
-                    onUploadComplete(
-                      false,
-                      error instanceof Error
-                        ? error.message
-                        : 'Failed to upload image'
-                    )
-                  }
-                })
+                      onUploadComplete(true, 'Image pasted successfully')
+                    } catch (error) {
+                      console.error('Image upload failed:', error)
+                      onUploadComplete(
+                        false,
+                        error instanceof Error
+                          ? error.message
+                          : ERROR_MESSAGES.UPLOAD_FAILED
+                      )
+                    }
+                  })()
+                  uploadPromises.push(uploadPromise)
+                }
+
+                // Wait for all uploads to complete
+                Promise.all(uploadPromises).catch(console.error)
 
                 return true // Prevent default paste behavior
               }
@@ -508,14 +584,21 @@ export const createPasteExtension = (
               // Check for text that might be code
               const text = clipboardData.getData('text/plain')
               if (text && text.length > 0) {
-                const { isCode, language } = isLikelyCode(text)
+                // Validate and sanitize pasted text content
+                const validation = validatePastedContent(text)
+                if (!validation.isValid) {
+                  console.warn('Invalid pasted content:', validation.error)
+                  return false
+                }
+
+                const { isCode, language } = isLikelyCode(validation.sanitized)
                 
                 if (isCode) {
                   // Create a code block with the detected language
                   const { tr } = view.state
                   const codeBlockNode = view.state.schema.nodes.codeBlock?.create(
                     language ? { language } : {},
-                    view.state.schema.text(text)
+                    view.state.schema.text(validation.sanitized)
                   )
                   
                   if (codeBlockNode) {

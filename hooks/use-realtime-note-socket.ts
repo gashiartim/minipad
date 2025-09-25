@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { getSocket } from "@/lib/socket-client"
+import { TIMING } from "@/lib/constants"
 
 interface RealtimeNoteUpdate {
   type: "content_update" | "connected" | "heartbeat"
@@ -26,7 +27,9 @@ export function useRealtimeNoteSocket({
 }: UseRealtimeNoteOptions) {
   const [isConnected, setIsConnected] = useState(false)
   const [lastError, setLastError] = useState<string | null>(null)
+  const [reconnectAttempts, setReconnectAttempts] = useState(0)
   const onUpdateRef = useRef(onUpdate)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   // Keep ref up to date
   useEffect(() => {
@@ -37,6 +40,13 @@ export function useRealtimeNoteSocket({
     const socket = getSocket()
     setIsConnected(true)
     setLastError(null)
+    setReconnectAttempts(0) // Reset reconnect attempts on successful connection
+    
+    // Clear any pending reconnection timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
     
     // Join the note room
     socket.emit("join-note", slug)
@@ -46,11 +56,27 @@ export function useRealtimeNoteSocket({
     setIsConnected(false)
   }, [])
 
-  const handleConnectError = useCallback((error: any) => {
+  const handleConnectError = useCallback((error: Error | string) => {
     console.error("Socket connection error:", error)
     setLastError("Connection failed")
     setIsConnected(false)
-  }, [])
+    
+    // Implement exponential backoff for reconnection
+    const backoffDelay = Math.min(
+      TIMING.WEBSOCKET_RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts),
+      TIMING.WEBSOCKET_RECONNECT_MAX_DELAY
+    )
+    
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+    }
+    
+    reconnectTimeoutRef.current = setTimeout(() => {
+      setReconnectAttempts(prev => prev + 1)
+      const socket = getSocket()
+      socket.connect()
+    }, backoffDelay)
+  }, [reconnectAttempts])
 
   const handleNoteUpdate = useCallback((data: RealtimeNoteUpdate) => {
     onUpdateRef.current?.(data)
@@ -83,6 +109,12 @@ export function useRealtimeNoteSocket({
       socket.off("connect_error", handleConnectError)
       socket.off("note-update", handleNoteUpdate)
       socket.emit("leave-note", slug)
+      
+      // Clear any pending reconnection timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
     }
   }, [slug, enabled]) // Removed callback dependencies
 
@@ -92,6 +124,13 @@ export function useRealtimeNoteSocket({
     socket.disconnect()
     setIsConnected(false)
     setLastError(null)
+    setReconnectAttempts(0)
+    
+    // Clear any pending reconnection timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
   }, [slug])
 
   return {

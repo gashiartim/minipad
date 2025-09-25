@@ -11,6 +11,8 @@ import { useRealtimeNoteSocket } from "@/hooks/use-realtime-note-socket"
 import { NoteLogin } from "@/components/note-login"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { Save, Home, Clock, Calendar } from "lucide-react"
+import { TIMING, ERROR_MESSAGES } from "@/lib/constants"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 interface Note {
   id: string
@@ -86,7 +88,7 @@ export function NoteClient({ slug }: NoteClientProps) {
           if (strippedLocal !== strippedUpdate) {
             toast({
               title: "Content updated by another user",
-              description: "Your changes will be preserved. Save to overwrite or refresh to discard.",
+              description: ERROR_MESSAGES.CONTENT_SYNC_CONFLICT,
               variant: "default",
             })
             return // Don't overwrite local changes
@@ -108,7 +110,7 @@ export function NoteClient({ slug }: NoteClientProps) {
           updatedAt: update.updatedAt || prev.updatedAt 
         } : null)
         setHasUnsavedChanges(false)
-        setTimeout(() => setIsUpdatingFromRemote(false), 500)
+        setTimeout(() => setIsUpdatingFromRemote(false), TIMING.SYNC_ANIMATION_DURATION)
       }
     }, [toast]) // Only toast dependency - everything else uses refs
   })
@@ -217,7 +219,7 @@ export function NoteClient({ slug }: NoteClientProps) {
         if (response.status === 403) {
           setIsAuthenticated(false)
           setNeedsAuth(true)
-          setAuthError("Secret expired or invalid. Please re-authenticate.")
+          setAuthError(ERROR_MESSAGES.AUTH_EXPIRED)
           return
         }
         
@@ -266,7 +268,7 @@ export function NoteClient({ slug }: NoteClientProps) {
 
     const timer = setTimeout(() => {
       saveNote()
-    }, 1500)
+    }, TIMING.AUTOSAVE_DELAY)
 
     return () => clearTimeout(timer)
   }, [contentRich, hasUnsavedChanges, autosaveEnabled, saveNote, note])
@@ -297,7 +299,7 @@ export function NoteClient({ slug }: NoteClientProps) {
     setHasUnsavedChanges(true)
     
     // Clear the local update flag after a brief delay
-    setTimeout(() => setIsUpdatingLocally(false), 100)
+    setTimeout(() => setIsUpdatingLocally(false), TIMING.LOCAL_UPDATE_CLEAR_DELAY)
   }
 
   // Show login screen if authentication is needed

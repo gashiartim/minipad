@@ -14,7 +14,9 @@
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
       "Bash(npm run dev:*)",
-      "Bash(pnpm remove:*)"
+      "Bash(pnpm remove:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run test:*)"
     ],
     "deny": [],
     "ask": []
