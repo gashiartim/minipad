@@ -138,50 +138,58 @@ export function RichTextEditor({
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const { toast } = useToast()
 
-  // Handle image copy
-  const handleImageCopy = useCallback(async (src: string) => {
-    try {
-      const success = await copyImageToClipboard(src)
-      if (success) {
-        toast({
-          title: 'Success',
-          description: 'Image copied to clipboard',
-        })
-      } else {
+  const handleImageCopy = useCallback(
+    async (src: string) => {
+      try {
+        const success = await copyImageToClipboard(src)
+        if (success) {
+          toast({
+            title: 'Success',
+            description: 'Image copied to clipboard',
+          })
+        } else {
+          toast({
+            title: 'Copy failed',
+            description: 'Failed to copy image to clipboard',
+            variant: 'destructive',
+          })
+        }
+      } catch (error) {
         toast({
           title: 'Copy failed',
           description: 'Failed to copy image to clipboard',
           variant: 'destructive',
         })
       }
-    } catch (error) {
-      toast({
-        title: 'Copy failed',
-        description: 'Failed to copy image to clipboard',
-        variant: 'destructive',
-      })
-    }
-  }, [toast])
+    },
+    [toast]
+  )
 
   // Handle image download
-  const handleImageDownload = useCallback((src: string, filename: string) => {
-    try {
-      downloadImage(src, filename)
-      toast({
-        title: 'Success',
-        description: 'Image download started',
-      })
-    } catch (error) {
-      toast({
-        title: 'Download failed',
-        description: 'Failed to download image',
-        variant: 'destructive',
-      })
-    }
-  }, [toast])
+  const handleImageDownload = useCallback(
+    (src: string, filename: string) => {
+      try {
+        downloadImage(src, filename)
+        toast({
+          title: 'Success',
+          description: 'Image download started',
+        })
+      } catch (error) {
+        toast({
+          title: 'Download failed',
+          description: 'Failed to download image',
+          variant: 'destructive',
+        })
+      }
+    },
+    [toast]
+  )
 
   // Create enhanced image extension
-  const EnhancedImage = createEnhancedImageExtension(handleImageCopy, handleImageDownload)
+  const EnhancedImage = createEnhancedImageExtension(
+    handleImageCopy,
+    handleImageDownload
+  )
 
   // Handle upload start
   const handleUploadStart = useCallback(() => {
@@ -423,7 +431,9 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH1}
-              disabled={!editor.can().chain().focus().toggleHeading({ level: 1 }).run()}
+              disabled={
+                !editor.can().chain().focus().toggleHeading({ level: 1 }).run()
+              }
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Heading 1"
             >
@@ -435,7 +445,9 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH2}
-              disabled={!editor.can().chain().focus().toggleHeading({ level: 2 }).run()}
+              disabled={
+                !editor.can().chain().focus().toggleHeading({ level: 2 }).run()
+              }
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Heading 2"
             >
@@ -447,7 +459,9 @@ export function RichTextEditor({
               }
               size="sm"
               onClick={toggleH3}
-              disabled={!editor.can().chain().focus().toggleHeading({ level: 3 }).run()}
+              disabled={
+                !editor.can().chain().focus().toggleHeading({ level: 3 }).run()
+              }
               className="transition-all hover:bg-accent/50 focus:ring-2 focus:ring-primary/20"
               aria-label="Heading 3"
             >
@@ -498,7 +512,10 @@ export function RichTextEditor({
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48 max-h-64 overflow-y-auto">
+              <DropdownMenuContent
+                align="start"
+                className="w-48 max-h-64 overflow-y-auto"
+              >
                 {!editor.isActive('codeBlock') ? (
                   <DropdownMenuItem
                     onClick={toggleCodeBlock}
@@ -576,8 +593,13 @@ export function RichTextEditor({
             </span>
           ) : (
             <div className="flex items-center justify-between">
-              <span>Paste images directly • Code auto-detects language • Right-click images to copy/resize</span>
-              <span className="text-muted-foreground/60">Use ⌘+formatting keys for quick styling</span>
+              <span>
+                Paste images directly • Code auto-detects language • Right-click
+                images to copy/resize
+              </span>
+              <span className="text-muted-foreground/60">
+                Use ⌘+formatting keys for quick styling
+              </span>
             </div>
           )}
         </div>
