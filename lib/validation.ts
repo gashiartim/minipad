@@ -17,7 +17,7 @@ export function validateFileSize(file: File): ValidationResult {
   if (file.size > IMAGE_VALIDATION.MAX_FILE_SIZE) {
     return {
       isValid: false,
-      error: ERROR_MESSAGES.FILE_TOO_LARGE
+      error: ERROR_MESSAGES.FILE_TOO_LARGE,
     }
   }
   return { isValid: true }
@@ -28,19 +28,21 @@ export function validateFileSize(file: File): ValidationResult {
  */
 export function validateFileType(file: File): ValidationResult {
   const mimeType = file.type.toLowerCase()
-  const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+  const extension = file.name
+    .toLowerCase()
+    .substring(file.name.lastIndexOf('.'))
 
   if (!IMAGE_VALIDATION.ALLOWED_MIME_TYPES.includes(mimeType as any)) {
     return {
       isValid: false,
-      error: ERROR_MESSAGES.INVALID_FILE_TYPE
+      error: ERROR_MESSAGES.INVALID_FILE_TYPE,
     }
   }
 
   if (!IMAGE_VALIDATION.ALLOWED_EXTENSIONS.includes(extension)) {
     return {
       isValid: false,
-      error: ERROR_MESSAGES.INVALID_FILE_TYPE
+      error: ERROR_MESSAGES.INVALID_FILE_TYPE,
     }
   }
 
@@ -50,10 +52,12 @@ export function validateFileType(file: File): ValidationResult {
 /**
  * Validates file signature to prevent MIME type spoofing
  */
-export async function validateFileSignature(file: File): Promise<ValidationResult> {
+export async function validateFileSignature(
+  file: File
+): Promise<ValidationResult> {
   return new Promise((resolve) => {
     const reader = new FileReader()
-    
+
     reader.onload = (e) => {
       try {
         const buffer = e.target?.result as ArrayBuffer
@@ -77,7 +81,7 @@ export async function validateFileSignature(file: File): Promise<ValidationResul
         if (!isValid) {
           resolve({
             isValid: false,
-            error: ERROR_MESSAGES.INVALID_FILE_TYPE
+            error: ERROR_MESSAGES.INVALID_FILE_TYPE,
           })
           return
         }
@@ -99,7 +103,9 @@ export async function validateFileSignature(file: File): Promise<ValidationResul
 /**
  * Validates image dimensions
  */
-export async function validateImageDimensions(file: File): Promise<ImageValidationResult> {
+export async function validateImageDimensions(
+  file: File
+): Promise<ImageValidationResult> {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) {
       resolve({ isValid: false, error: ERROR_MESSAGES.INVALID_FILE_TYPE })
@@ -111,23 +117,27 @@ export async function validateImageDimensions(file: File): Promise<ImageValidati
 
     img.onload = () => {
       URL.revokeObjectURL(url)
-      
+
       const { width, height } = img
       const { MIN_DIMENSIONS, MAX_DIMENSIONS } = IMAGE_VALIDATION
 
-      if (width < MIN_DIMENSIONS.width || height < MIN_DIMENSIONS.height ||
-          width > MAX_DIMENSIONS.width || height > MAX_DIMENSIONS.height) {
+      if (
+        width < MIN_DIMENSIONS.width ||
+        height < MIN_DIMENSIONS.height ||
+        width > MAX_DIMENSIONS.width ||
+        height > MAX_DIMENSIONS.height
+      ) {
         resolve({
           isValid: false,
           error: ERROR_MESSAGES.INVALID_DIMENSIONS,
-          dimensions: { width, height }
+          dimensions: { width, height },
         })
         return
       }
 
       resolve({
         isValid: true,
-        dimensions: { width, height }
+        dimensions: { width, height },
       })
     }
 
@@ -143,7 +153,9 @@ export async function validateImageDimensions(file: File): Promise<ImageValidati
 /**
  * Comprehensive image validation
  */
-export async function validateImage(file: File): Promise<ImageValidationResult> {
+export async function validateImage(
+  file: File
+): Promise<ImageValidationResult> {
   // Quick validations first
   const sizeCheck = validateFileSize(file)
   if (!sizeCheck.isValid) return sizeCheck
@@ -169,12 +181,12 @@ export function sanitizeHtmlContent(html: string): string {
 
   // Remove script tags and event handlers
   const scripts = tempDiv.querySelectorAll('script')
-  scripts.forEach(script => script.remove())
+  scripts.forEach((script) => script.remove())
 
   // Remove dangerous attributes
   const allElements = tempDiv.querySelectorAll('*')
-  allElements.forEach(element => {
-    Array.from(element.attributes).forEach(attr => {
+  allElements.forEach((element) => {
+    Array.from(element.attributes).forEach((attr) => {
       if (attr.name.startsWith('on') || attr.name === 'javascript:') {
         element.removeAttribute(attr.name)
       }
@@ -187,19 +199,28 @@ export function sanitizeHtmlContent(html: string): string {
 /**
  * Validates and sanitizes pasted content
  */
-export function validatePastedContent(content: string): { isValid: boolean; sanitized: string; error?: string } {
+export function validatePastedContent(content: string): {
+  isValid: boolean
+  sanitized: string
+  error?: string
+} {
   if (!content || content.length === 0) {
     return { isValid: true, sanitized: '' }
   }
 
-  if (content.length > 1000000) { // 1MB text limit
+  if (content.length > 1000000) {
+    // 1MB text limit
     return {
       isValid: false,
       sanitized: '',
-      error: 'Content too large'
+      error: 'Content too large',
     }
   }
 
-  const sanitized = sanitizeHtmlContent(content)
+  const sanitized = content
+    .replace(/\r\n/g, '\n') // normalize newlines
+    .replace(/\u0000/g, '') // remove null chars
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '') // strip other control chars
+
   return { isValid: true, sanitized }
 }
