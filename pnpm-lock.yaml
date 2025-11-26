@@ -18,7 +18,7 @@ importers:
         specifier: latest
         version: 1.55.0
       '@prisma/client':
-        specifier: latest
+        specifier: ^6.16.2
         version: 6.16.2(prisma@6.16.2(typescript@5.0.2))(typescript@5.0.2)
       '@radix-ui/react-accordion':
         specifier: latest
@@ -195,7 +195,7 @@ importers:
         specifier: latest
         version: 0.12.7
       prisma:
-        specifier: latest
+        specifier: ^6.16.2
         version: 6.16.2(typescript@5.0.2)
       react:
         specifier: ^19

@@ -43,13 +43,14 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copy our custom server.js for Socket.IO support
 COPY --from=builder /app/server.js ./
 
-# Install only Socket.IO dependencies for production
+# Install production dependencies
 COPY --from=builder /app/package.json ./
-RUN corepack enable pnpm && pnpm add --prod socket.io
+RUN corepack enable pnpm && pnpm install --prod --frozen-lockfile
 
-# Copy Prisma files and regenerate client for production
+# Copy Prisma files and generated client from builder (already generated, no need to regenerate)
 COPY --from=builder /app/prisma ./prisma
-RUN npx prisma generate
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy startup script
 COPY scripts/docker-entrypoint.sh ./scripts/
