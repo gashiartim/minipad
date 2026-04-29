@@ -8,8 +8,6 @@
 
 Live site: [minipad.app](https://minipad.app) · Source: [github.com/gashiartim/minipad](https://github.com/gashiartim/minipad)
 
-![Screenshots placeholder](https://via.placeholder.com/960x540/1a1a1a/f5f5f5?text=Add+screenshots+or+GIF+to+docs%2F)
-
 *(Replace the image above with a real screenshot or short GIF of the home screen + editor: drop files under `docs/` and link them here.)*
 
 ## Features
