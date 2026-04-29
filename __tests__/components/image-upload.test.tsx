@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event"
 import { ImageUpload } from "@/components/image-upload"
 
 // Mock the toast hook
+const mockToastFn = jest.fn()
+
 jest.mock("@/hooks/use-toast", () => ({
   useToast: () => ({
-    toast: jest.fn(),
+    toast: mockToastFn,
   }),
 }))
 
@@ -18,6 +20,7 @@ describe("ImageUpload", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockToastFn.mockClear()
     ;(global.fetch as jest.Mock).mockClear()
   })
 
@@ -62,9 +65,6 @@ describe("ImageUpload", () => {
 
   it("should reject invalid file types", async () => {
     const user = userEvent.setup()
-    const { useToast } = require("@/hooks/use-toast")
-    const mockToast = jest.fn()
-    useToast.mockReturnValue({ toast: mockToast })
 
     render(<ImageUpload {...mockProps} />)
 
@@ -81,7 +81,7 @@ describe("ImageUpload", () => {
 
     fireEvent.change(fileInput)
 
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(mockToastFn).toHaveBeenCalledWith({
       title: "Invalid file type",
       description: "Please upload PNG, JPEG, WebP, or GIF images only",
       variant: "destructive",
@@ -90,9 +90,6 @@ describe("ImageUpload", () => {
 
   it("should reject files that are too large", async () => {
     const user = userEvent.setup()
-    const { useToast } = require("@/hooks/use-toast")
-    const mockToast = jest.fn()
-    useToast.mockReturnValue({ toast: mockToast })
 
     render(<ImageUpload {...mockProps} />)
 
@@ -110,7 +107,7 @@ describe("ImageUpload", () => {
 
     fireEvent.change(fileInput)
 
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(mockToastFn).toHaveBeenCalledWith({
       title: "File too large",
       description: "Please upload images smaller than 10MB",
       variant: "destructive",
@@ -120,12 +117,12 @@ describe("ImageUpload", () => {
   it("should handle drag and drop", () => {
     render(<ImageUpload {...mockProps} />)
 
-    const dropZone = screen.getByText("Drop images here").closest("div")
+    const dropZone = screen.getByRole("presentation")
 
-    fireEvent.dragOver(dropZone!)
+    fireEvent.dragOver(dropZone)
     expect(dropZone).toHaveClass("border-primary")
 
-    fireEvent.dragLeave(dropZone!)
+    fireEvent.dragLeave(dropZone)
     expect(dropZone).not.toHaveClass("border-primary")
   })
 })

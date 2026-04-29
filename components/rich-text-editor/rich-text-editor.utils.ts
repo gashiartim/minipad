@@ -28,8 +28,8 @@ export async function uploadImageFromPaste(
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    let errorMessage = ERROR_MESSAGES.UPLOAD_FAILED
+    const errorData = await response.json().catch(() => ({})) as { error?: string }
+    let errorMessage: string = ERROR_MESSAGES.UPLOAD_FAILED
 
     if (response.status === 403) {
       errorMessage = ERROR_MESSAGES.AUTH_EXPIRED
@@ -207,7 +207,7 @@ export const createEnhancedImageExtension = (
     },
 
     addNodeView() {
-      return ({ node, view, getPos, HTMLAttributes }) => {
+      return ({ node, view, getPos }) => {
         const container = document.createElement('div')
         container.className = 'relative inline-block group'
 
@@ -244,7 +244,7 @@ export const createEnhancedImageExtension = (
         let startHeight = 0
         let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 
-        const startResize = (e: MouseEvent, direction: string) => {
+        const startResize = (e: MouseEvent) => {
           e.preventDefault()
           e.stopPropagation()
           isResizing = true
@@ -321,10 +321,10 @@ export const createEnhancedImageExtension = (
         }
 
         // Add event listeners to handles
-        handles.se.addEventListener('mousedown', (e) => startResize(e, 'se'))
-        handles.sw.addEventListener('mousedown', (e) => startResize(e, 'sw'))
-        handles.ne.addEventListener('mousedown', (e) => startResize(e, 'ne'))
-        handles.nw.addEventListener('mousedown', (e) => startResize(e, 'nw'))
+        handles.se.addEventListener('mousedown', (e) => startResize(e))
+        handles.sw.addEventListener('mousedown', (e) => startResize(e))
+        handles.ne.addEventListener('mousedown', (e) => startResize(e))
+        handles.nw.addEventListener('mousedown', (e) => startResize(e))
 
         // Keyboard shortcuts
         img.addEventListener('keydown', (e) => {
@@ -511,7 +511,9 @@ export const createPasteExtension = (
           props: {
             handlePaste: (view, event) => {
               const clipboardData =
-                event.clipboardData || (window as any).clipboardData
+                event.clipboardData ||
+                (window as Window & { clipboardData?: DataTransfer })
+                  .clipboardData
               if (!clipboardData) return false
 
               // Check for images first
@@ -529,6 +531,7 @@ export const createPasteExtension = (
 
                 for (let i = 0; i < maxUploads; i++) {
                   const item = imageItems[i]
+                  if (!item) continue
                   const uploadPromise = (async () => {
                     const file = item.getAsFile()
                     if (!file) return

@@ -1,5 +1,6 @@
 import { mkdir } from "fs/promises"
 import { existsSync } from "fs"
+import { createHash } from "crypto"
 import path from "path"
 
 export async function ensureUploadsDir() {
@@ -11,8 +12,7 @@ export async function ensureUploadsDir() {
 }
 
 export function generateImageFilename(buffer: Buffer, originalName: string): string {
-  const crypto = require("crypto")
-  const hash = crypto.createHash("sha256").update(buffer).digest("hex")
+  const hash = createHash("sha256").update(new Uint8Array(buffer)).digest("hex")
   const ext = path.extname(originalName).toLowerCase()
   const randomSuffix = Math.random().toString(36).substring(2, 6)
   return `${hash.substring(0, 16)}-${randomSuffix}${ext}`

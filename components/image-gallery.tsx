@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Images } from "lucide-react"
@@ -40,9 +41,12 @@ export function ImageGallery({ images }: ImageGalleryProps) {
           {images.map((image) => (
             <div key={image.id} className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
               <div className="aspect-video bg-muted flex items-center justify-center">
-                <img
+                <Image
                   src={`/i/${image.path}`}
                   alt="Uploaded image"
+                  width={800}
+                  height={450}
+                  unoptimized
                   className="max-w-full max-h-full object-contain cursor-pointer"
                   onClick={() => window.open(`/i/${image.path}`, "_blank")}
                 />

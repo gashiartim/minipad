@@ -37,7 +37,8 @@ export const imageUploadSchema = z.object({
       ? z
           .instanceof(File)
           .refine(
-            (file) => allowedImageTypes.includes(file.type as any),
+            (file) =>
+              allowedImageTypes.includes(file.type as AllowedImageMime),
             'Invalid file type'
           )
           .refine((file) => file.size <= maxImageSize, 'File too large')
@@ -52,6 +53,8 @@ export const allowedImageTypes = [
   'image/webp',
   'image/gif',
 ] as const
+
+export type AllowedImageMime = (typeof allowedImageTypes)[number]
 
 export const maxImageSize = 10 * 1024 * 1024 // 10MB
 

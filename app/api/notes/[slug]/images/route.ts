@@ -2,7 +2,12 @@ import type { NextRequest } from "next/server"
 import { writeFile } from "fs/promises"
 import path from "path"
 import { prisma } from "@/lib/db"
-import { slugSchema, allowedImageTypes, maxImageSize } from "@/lib/validators"
+import {
+  slugSchema,
+  allowedImageTypes,
+  maxImageSize,
+} from "@/lib/validators"
+import type { AllowedImageMime } from "@/lib/validators"
 import { createErrorResponse, createSuccessResponse, checkRateLimit, logRequest, logError } from "@/lib/api-middleware"
 import { ensureUploadsDir, generateImageFilename } from "@/lib/server-utils"
 
@@ -71,7 +76,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Validate file type
-    if (!allowedImageTypes.includes(file.type as any)) {
+    if (!allowedImageTypes.includes(file.type as AllowedImageMime)) {
       logRequest(request, 415, startTime)
       return createErrorResponse("Invalid file type", "INVALID_TYPE", 415)
     }
@@ -93,7 +98,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const filePath = path.join(uploadsDir, filename)
 
     // Write file to disk
-    await writeFile(filePath, buffer)
+    await writeFile(filePath, new Uint8Array(buffer))
 
     // Create image record in database
     const image = await prisma.image.create({

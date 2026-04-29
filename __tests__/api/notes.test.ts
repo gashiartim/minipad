@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { NextRequest } from "next/server"
 import { POST } from "@/app/api/notes/route"
 import { prisma } from "@/lib/db"

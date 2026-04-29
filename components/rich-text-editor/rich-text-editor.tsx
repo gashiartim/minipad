@@ -5,7 +5,6 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Typography from '@tiptap/extension-typography'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
-import { createLowlight } from 'lowlight'
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -40,7 +39,6 @@ import {
   createEnhancedImageExtension,
   createPasteExtension,
 } from './rich-text-editor.utils'
-import { TIMING } from '@/lib/constants'
 import { ErrorBoundary } from '@/components/error-boundary'
 
 // Import lazy-loaded syntax highlighting
@@ -84,7 +82,7 @@ export function RichTextEditor({
             variant: 'destructive',
           })
         }
-      } catch (error) {
+      } catch {
         toast({
           title: 'Copy failed',
           description: 'Failed to copy image to clipboard',
@@ -104,7 +102,7 @@ export function RichTextEditor({
           title: 'Success',
           description: 'Image download started',
         })
-      } catch (error) {
+      } catch {
         toast({
           title: 'Download failed',
           description: 'Failed to download image',

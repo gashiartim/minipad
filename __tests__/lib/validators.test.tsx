@@ -76,7 +76,7 @@ describe("Validators", () => {
     })
 
     it("should remove event handlers", () => {
-      expect(sanitizeContent("Hello onclick='alert()' world")).toBe("Hello  world")
+      expect(sanitizeContent("Hello onclick='alert()' world")).toBe("Hello world")
     })
   })
 

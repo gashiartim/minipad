@@ -9,10 +9,20 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Upload, FileImage, AlertCircle } from "lucide-react"
 
+interface UploadedImagePayload {
+  id: string
+  path: string
+  mime: string
+  width: number | null
+  height: number | null
+  sizeBytes: number
+  createdAt: string
+}
+
 interface ImageUploadProps {
   slug: string
   secret: string
-  onImageUploaded: (image: any) => void
+  onImageUploaded: (image: UploadedImagePayload) => void
 }
 
 export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps) {
@@ -115,7 +125,7 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
         title: "Success",
         description: "Image uploaded successfully",
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "Upload failed",
         description: "Failed to upload image",
@@ -153,6 +163,7 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
       </CardHeader>
       <CardContent>
         <div
+          role="presentation"
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ${
             isDragging
               ? "border-primary bg-primary/5 scale-[1.02]"
