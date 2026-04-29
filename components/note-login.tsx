@@ -32,9 +32,11 @@ export function NoteLogin({ slug, onAuth, isLoading, error }: NoteLoginProps) {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      handleSubmit(e as any)
+      e.preventDefault()
+      if (!secret.trim()) return
+      onAuth(secret.trim())
     }
   }
 

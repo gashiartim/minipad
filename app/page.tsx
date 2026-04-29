@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 
 export default function HomePage() {
@@ -73,7 +73,7 @@ export default function HomePage() {
       })
 
       router.push(`/${data.slug}`)
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create note",

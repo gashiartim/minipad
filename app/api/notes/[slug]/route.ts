@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server"
+import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { updateNoteSchema, slugSchema } from "@/lib/validators"
 import {
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Don't return the secret in the response
     const { secret, ...noteData } = note
+    void secret
 
     logRequest(request, 200, startTime)
     return createSuccessResponse(noteData)
@@ -135,7 +137,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: Prisma.NoteUpdateInput = {
       updatedAt: new Date(),
     }
     

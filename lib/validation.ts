@@ -32,14 +32,22 @@ export function validateFileType(file: File): ValidationResult {
     .toLowerCase()
     .substring(file.name.lastIndexOf('.'))
 
-  if (!IMAGE_VALIDATION.ALLOWED_MIME_TYPES.includes(mimeType as any)) {
+  if (
+    !IMAGE_VALIDATION.ALLOWED_MIME_TYPES.includes(
+      mimeType as (typeof IMAGE_VALIDATION.ALLOWED_MIME_TYPES)[number]
+    )
+  ) {
     return {
       isValid: false,
       error: ERROR_MESSAGES.INVALID_FILE_TYPE,
     }
   }
 
-  if (!IMAGE_VALIDATION.ALLOWED_EXTENSIONS.includes(extension)) {
+  if (
+    !IMAGE_VALIDATION.ALLOWED_EXTENSIONS.includes(
+      extension as (typeof IMAGE_VALIDATION.ALLOWED_EXTENSIONS)[number]
+    )
+  ) {
     return {
       isValid: false,
       error: ERROR_MESSAGES.INVALID_FILE_TYPE,
@@ -87,7 +95,7 @@ export async function validateFileSignature(
         }
 
         resolve({ isValid: true })
-      } catch (error) {
+      } catch {
         resolve({ isValid: false, error: 'File validation failed' })
       }
     }

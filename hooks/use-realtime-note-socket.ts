@@ -116,7 +116,7 @@ export function useRealtimeNoteSocket({
         reconnectTimeoutRef.current = null
       }
     }
-  }, [slug, enabled]) // Removed callback dependencies
+  }, [slug, enabled, handleConnect, handleDisconnect, handleConnectError, handleNoteUpdate])
 
   const disconnect = useCallback(() => {
     const socket = getSocket()

@@ -4,7 +4,7 @@ import { createLowlight } from 'lowlight'
 export const lowlight = createLowlight()
 
 // Language loaders for lazy loading
-const languageLoaders: Record<string, () => Promise<any>> = {
+const languageLoaders: Record<string, () => Promise<{ default: unknown }>> = {
   javascript: () => import('highlight.js/lib/languages/javascript'),
   typescript: () => import('highlight.js/lib/languages/typescript'),
   python: () => import('highlight.js/lib/languages/python'),
@@ -47,14 +47,14 @@ export async function loadLanguage(language: string): Promise<void> {
   }
 
   try {
-    const module = await loader()
-    const languageDefinition = module.default
+    const hlModule = await loader()
+    const languageDefinition = hlModule.default
 
     // Register with lowlight
-    if (language === 'xml') {
-      lowlight.register({ html: languageDefinition })
+            if (language === 'xml') {
+      lowlight.register({ html: languageDefinition as never })
     } else {
-      lowlight.register({ [language]: languageDefinition })
+      lowlight.register({ [language]: languageDefinition as never })
     }
 
     loadedLanguages.add(language)

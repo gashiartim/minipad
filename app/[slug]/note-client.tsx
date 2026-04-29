@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useRealtimeNoteSocket } from "@/hooks/use-realtime-note-socket"
@@ -12,7 +10,6 @@ import { NoteLogin } from "@/components/note-login"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { Save, Home, Clock, Calendar } from "lucide-react"
 import { TIMING, ERROR_MESSAGES } from "@/lib/constants"
-import { ErrorBoundary } from "@/components/error-boundary"
 
 interface Note {
   id: string
@@ -159,7 +156,7 @@ export function NoteClient({ slug }: NoteClientProps) {
       if (providedSecret) {
         setSecret(providedSecret)
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to load note",
@@ -176,7 +173,7 @@ export function NoteClient({ slug }: NoteClientProps) {
     
     try {
       await fetchNote(providedSecret)
-    } catch (error) {
+    } catch {
       setAuthError("Invalid secret. Please try again.")
       setIsLoading(false)
     }
@@ -194,7 +191,7 @@ export function NoteClient({ slug }: NoteClientProps) {
     setLastSaved(new Date())
     
     try {
-      const requestBody: any = {
+      const requestBody: Record<string, string | undefined> = {
         secret: secret || undefined,
         contentRich: contentRichToSave,
         contentFormat: "rich",
@@ -247,7 +244,7 @@ export function NoteClient({ slug }: NoteClientProps) {
           description: "Note saved successfully",
         })
       }
-    } catch (error) {
+    } catch {
       // Revert optimistic update
       setHasUnsavedChanges(contentRich !== note.contentRich)
       setLastSaved(null)

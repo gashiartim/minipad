@@ -1,4 +1,4 @@
-import { getSocket } from "@/lib/socket-client"
+import { getSocket, resetSocketClient } from "@/lib/socket-client"
 import { io } from "socket.io-client"
 
 // Mock socket.io-client
@@ -9,6 +9,7 @@ describe("Socket.IO client utilities", () => {
   let mockSocket: any
 
   beforeEach(() => {
+    resetSocketClient()
     jest.clearAllMocks()
     
     mockSocket = {

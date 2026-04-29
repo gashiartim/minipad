@@ -15,7 +15,7 @@ export function createErrorResponse(message: string, code: string, status: numbe
   return response
 }
 
-export function createSuccessResponse(data: any, status = 200): Response {
+export function createSuccessResponse(data: unknown, status = 200): Response {
   const response = new Response(JSON.stringify(data), { 
     status,
     headers: { "Content-Type": "application/json" }
@@ -41,7 +41,7 @@ export function validateRequestSize(request: NextRequest, maxSize: number = 1024
 }
 
 export function checkRateLimit(request: NextRequest): { allowed: boolean; response?: Response } {
-  const { allowed, remaining, resetTime } = writeRateLimiter.checkLimit(request)
+  const { allowed, resetTime } = writeRateLimiter.checkLimit(request)
 
   if (!allowed) {
     const response = createErrorResponse("Too many requests", "RATE_LIMITED", 429)

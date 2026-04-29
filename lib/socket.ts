@@ -8,7 +8,16 @@ export const getSocketIO = (): SocketIOServer | undefined => {
   return globalThis.io
 }
 
-export const broadcastNoteUpdate = (slug: string, data: any) => {
+export interface NoteBroadcastPayload {
+  type: string
+  content?: string | null
+  contentRich?: string | null
+  contentFormat?: string | null
+  updatedAt?: string
+  [key: string]: unknown
+}
+
+export const broadcastNoteUpdate = (slug: string, data: NoteBroadcastPayload) => {
   const socketIO = getSocketIO()
   if (!socketIO) {
     console.warn("Socket.IO not initialized, cannot broadcast update")

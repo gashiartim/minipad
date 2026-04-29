@@ -8,12 +8,12 @@ const mockGetSocket = getSocket as jest.MockedFunction<typeof getSocket>
 
 describe("useRealtimeNoteSocket", () => {
   let mockSocket: any
-  let mockOnUpdate: jest.Mock
+
+  const mockOnUpdate = jest.fn()
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
-    mockOnUpdate = jest.fn()
+    mockOnUpdate.mockClear()
     mockSocket = {
       connected: false,
       on: jest.fn(),
@@ -26,16 +26,16 @@ describe("useRealtimeNoteSocket", () => {
     mockGetSocket.mockReturnValue(mockSocket)
   })
 
-  const defaultProps = {
+  const getDefaultProps = () => ({
     slug: "test-note",
     secret: "test-secret",
     onUpdate: mockOnUpdate,
-    enabled: true
-  }
+    enabled: true,
+  })
 
   describe("initialization", () => {
     it("should set up socket event listeners when enabled", () => {
-      renderHook(() => useRealtimeNoteSocket(defaultProps))
+      renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       expect(mockSocket.on).toHaveBeenCalledWith("connect", expect.any(Function))
       expect(mockSocket.on).toHaveBeenCalledWith("disconnect", expect.any(Function))
@@ -45,7 +45,7 @@ describe("useRealtimeNoteSocket", () => {
 
     it("should not set up listeners when disabled", () => {
       renderHook(() => useRealtimeNoteSocket({
-        ...defaultProps,
+        ...getDefaultProps(),
         enabled: false
       }))
 
@@ -56,7 +56,7 @@ describe("useRealtimeNoteSocket", () => {
     it("should join note room if already connected", () => {
       mockSocket.connected = true
       
-      renderHook(() => useRealtimeNoteSocket(defaultProps))
+      renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       // Should call handleConnect which emits join-note
       expect(mockSocket.emit).toHaveBeenCalledWith("join-note", "test-note")
@@ -65,7 +65,7 @@ describe("useRealtimeNoteSocket", () => {
 
   describe("connection state", () => {
     it("should update connection state on connect", () => {
-      const { result } = renderHook(() => useRealtimeNoteSocket(defaultProps))
+      const { result } = renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       // Simulate socket connect event
       const connectHandler = mockSocket.on.mock.calls.find(
@@ -82,7 +82,7 @@ describe("useRealtimeNoteSocket", () => {
     })
 
     it("should update connection state on disconnect", () => {
-      const { result } = renderHook(() => useRealtimeNoteSocket(defaultProps))
+      const { result } = renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       // First connect
       const connectHandler = mockSocket.on.mock.calls.find(
@@ -103,7 +103,7 @@ describe("useRealtimeNoteSocket", () => {
     })
 
     it("should handle connection errors", () => {
-      const { result } = renderHook(() => useRealtimeNoteSocket(defaultProps))
+      const { result } = renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       const errorHandler = mockSocket.on.mock.calls.find(
         call => call[0] === "connect_error"
@@ -120,7 +120,7 @@ describe("useRealtimeNoteSocket", () => {
 
   describe("note updates", () => {
     it("should call onUpdate when receiving note-update event", () => {
-      renderHook(() => useRealtimeNoteSocket(defaultProps))
+      renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       // Get the note-update handler that was registered
       const updateHandler = mockSocket.on.mock.calls.find(
@@ -144,7 +144,7 @@ describe("useRealtimeNoteSocket", () => {
     })
 
     it("should handle different update types", () => {
-      renderHook(() => useRealtimeNoteSocket(defaultProps))
+      renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       const updateHandler = mockSocket.on.mock.calls.find(
         call => call[0] === "note-update"
@@ -171,7 +171,7 @@ describe("useRealtimeNoteSocket", () => {
 
   describe("cleanup", () => {
     it("should remove event listeners and leave room on unmount", () => {
-      const { unmount } = renderHook(() => useRealtimeNoteSocket(defaultProps))
+      const { unmount } = renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       unmount()
 
@@ -184,7 +184,7 @@ describe("useRealtimeNoteSocket", () => {
 
     it("should leave room when slug changes", () => {
       const { rerender } = renderHook(
-        ({ slug }) => useRealtimeNoteSocket({ ...defaultProps, slug }),
+        ({ slug }) => useRealtimeNoteSocket({ ...getDefaultProps(), slug }),
         { initialProps: { slug: "note-1" } }
       )
 
@@ -202,7 +202,7 @@ describe("useRealtimeNoteSocket", () => {
 
   describe("disconnect method", () => {
     it("should manually disconnect and leave room", () => {
-      const { result } = renderHook(() => useRealtimeNoteSocket(defaultProps))
+      const { result } = renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
       act(() => {
         result.current.disconnect()
