@@ -2,48 +2,54 @@ import { test, expect } from "@playwright/test"
 
 test.describe("Note Creation", () => {
   test("should create a new note", async ({ page }) => {
+    const slug = `test-note-${Date.now()}`
     await page.goto("/")
 
-    // Fill in note details
-    await page.fill('[data-testid="slug-input"]', "test-note")
-    await page.fill('[data-testid="secret-input"]', "test-secret")
-
-    // Create note
-    await page.click('[data-testid="create-button"]')
+    await page.getByRole("textbox", { name: "Note Name" }).fill(slug)
+    await page.getByRole("button", { name: /^Create/i }).click()
 
     // Should navigate to note page
-    await expect(page).toHaveURL("/test-note")
-    await expect(page.locator("h1")).toContainText("test-note")
+    await page.waitForURL(new RegExp(`/${slug}$`), { timeout: 15000 })
+    await page.waitForSelector('[data-testid="rich-text-editor"]', {
+      timeout: 15000,
+    })
+    await expect(page.locator("text=Live")).toBeVisible({ timeout: 15000 })
   })
 
   test("should create note with generated slug", async ({ page }) => {
     await page.goto("/")
 
-    // Create note without slug
-    await page.click('[data-testid="create-button"]')
+    await page.getByRole("button", { name: /^Create/i }).click()
 
     // Should navigate to generated slug
-    await expect(page.url()).toMatch(/\/[a-zA-Z0-9]{8}$/)
+    await page.waitForURL(/\/[a-zA-Z0-9]{8}$/, { timeout: 15000 })
   })
 
-  test("should open existing note", async ({ page }) => {
+  test("should open existing note", async ({ page, request }) => {
+    const slug = `existing-note-${Date.now()}`
+    await request.post("/api/notes", {
+      data: { slug: "existing-note" },
+    })
+
     await page.goto("/")
 
-    // Enter slug and click open
-    await page.fill('[data-testid="slug-input"]', "existing-note")
-    await page.click('[data-testid="open-button"]')
+    await page
+      .getByRole("textbox", { name: "Note Name" })
+      .fill(slug)
+    await page.getByRole("button", { name: /Open Existing Note/i }).click()
 
     // Should navigate to note page
-    await expect(page).toHaveURL("/existing-note")
+    await page.waitForURL(new RegExp(`/${slug}$`), { timeout: 15000 })
   })
 
   test("should validate slug input", async ({ page }) => {
     await page.goto("/")
 
-    // Try to open without slug
-    await page.click('[data-testid="open-button"]')
-
-    // Should show error toast
-    await expect(page.locator('[role="alert"]')).toContainText("Please enter a slug")
+    // Open button should be disabled when slug is empty
+    await expect(
+      page.getByRole("button", {
+        name: /Enter a note name above to open existing note/i,
+      })
+    ).toBeDisabled()
   })
 })
