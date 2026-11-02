@@ -46,8 +46,8 @@ export function useRealtimeNoteSocket({
       reconnectTimeoutRef.current = null
     }
     
-    socket.emit("join-note", slug)
-  }, [slug])
+    socket.emit("join-note", { slug, secret: secret || undefined })
+  }, [slug, secret])
 
   const handleDisconnect = useCallback(() => {
     setIsConnected(false)

@@ -1,12 +1,22 @@
 import { renderHook, act } from "@testing-library/react"
 import { useRealtimeNoteSocket } from "@/hooks/use-realtime-note-socket"
 import { getSocket } from "@/lib/socket-client"
+import type { Socket } from "socket.io-client"
+
+interface MockSocket {
+  connected: boolean
+  id: string
+  on: jest.Mock
+  off: jest.Mock
+  emit: jest.Mock
+  disconnect: jest.Mock
+}
 
 jest.mock("@/lib/socket-client")
 const mockGetSocket = getSocket as jest.MockedFunction<typeof getSocket>
 
 describe("useRealtimeNoteSocket", () => {
-  let mockSocket: any
+  let mockSocket: MockSocket
 
   const mockOnUpdate = jest.fn()
 
@@ -22,7 +32,7 @@ describe("useRealtimeNoteSocket", () => {
       id: "mock-socket-id"
     }
 
-    mockGetSocket.mockReturnValue(mockSocket)
+    mockGetSocket.mockReturnValue(mockSocket as unknown as Socket)
   })
 
   const getDefaultProps = () => ({
@@ -57,7 +67,7 @@ describe("useRealtimeNoteSocket", () => {
       
       renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
-      expect(mockSocket.emit).toHaveBeenCalledWith("join-note", "test-note")
+      expect(mockSocket.emit).toHaveBeenCalledWith("join-note", { slug: "test-note", secret: "test-secret" })
     })
   })
 
@@ -75,7 +85,7 @@ describe("useRealtimeNoteSocket", () => {
 
       expect(result.current.isConnected).toBe(true)
       expect(result.current.lastError).toBe(null)
-      expect(mockSocket.emit).toHaveBeenCalledWith("join-note", "test-note")
+      expect(mockSocket.emit).toHaveBeenCalledWith("join-note", { slug: "test-note", secret: "test-secret" })
     })
 
     it("should update connection state on disconnect", () => {
