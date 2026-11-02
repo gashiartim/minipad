@@ -10,13 +10,13 @@ describe("Socket.IO utilities", () => {
     mockSocketIO = {
       to: jest.fn().mockReturnThis(),
       emit: jest.fn(),
-    } as any
+    } as unknown as jest.Mocked<SocketIOServer>
 
-    ;(globalThis as any).io = mockSocketIO
+    globalThis.io = mockSocketIO
   })
 
   afterEach(() => {
-    ;(globalThis as any).io = undefined
+    globalThis.io = undefined
   })
 
   describe("getSocketIO", () => {
@@ -26,7 +26,7 @@ describe("Socket.IO utilities", () => {
     })
 
     it("should return undefined when Socket.IO is not initialized", () => {
-      ;(globalThis as any).io = undefined
+      globalThis.io = undefined
       const result = getSocketIO()
       expect(result).toBeUndefined()
     })
@@ -49,7 +49,7 @@ describe("Socket.IO utilities", () => {
     })
 
     it("should handle missing Socket.IO gracefully", () => {
-      ;(globalThis as any).io = undefined
+      globalThis.io = undefined
       
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation()
       

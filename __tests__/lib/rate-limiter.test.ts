@@ -3,7 +3,7 @@ import { jest } from "@jest/globals"
 
 describe("Rate Limiter", () => {
   beforeEach(() => {
-    ;(writeRateLimiter as any).store.clear()
+    writeRateLimiter.reset()
   })
 
   it("should allow requests within limit", () => {
@@ -11,7 +11,7 @@ describe("Rate Limiter", () => {
       headers: {
         get: jest.fn().mockReturnValue("127.0.0.1"),
       },
-    } as any
+    } as unknown as Request
 
     const result = writeRateLimiter.checkLimit(mockRequest)
     expect(result.allowed).toBe(true)
@@ -23,7 +23,7 @@ describe("Rate Limiter", () => {
       headers: {
         get: jest.fn().mockReturnValue("127.0.0.1"),
       },
-    } as any
+    } as unknown as Request
 
     for (let i = 0; i < 60; i++) {
       writeRateLimiter.checkLimit(mockRequest)
@@ -39,13 +39,13 @@ describe("Rate Limiter", () => {
       headers: {
         get: jest.fn().mockReturnValue("127.0.0.1"),
       },
-    } as any
+    } as unknown as Request
 
     const mockRequest2 = {
       headers: {
         get: jest.fn().mockReturnValue("192.168.1.1"),
       },
-    } as any
+    } as unknown as Request
 
     for (let i = 0; i < 60; i++) {
       writeRateLimiter.checkLimit(mockRequest1)

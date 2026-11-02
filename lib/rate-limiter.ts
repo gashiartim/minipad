@@ -25,6 +25,10 @@ export class InMemoryRateLimiter {
     }
   }
 
+  reset(): void {
+    this.store.clear()
+  }
+
   private getClientIP(request: Request): string {
     const forwarded = request.headers.get("x-forwarded-for")
     const realIP = request.headers.get("x-real-ip")
