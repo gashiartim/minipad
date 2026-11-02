@@ -7,14 +7,12 @@ async function getDatabaseStats(): Promise<void> {
   try {
     console.log("📊 Generating database statistics...\n")
 
-    // Get note statistics
     const [totalNotes, notesWithSecrets, notesWithContent] = await Promise.all([
       prisma.note.count(),
       prisma.note.count({ where: { secret: { not: null } } }),
       prisma.note.count({ where: { content: { not: "" } } }),
     ])
 
-    // Get image statistics
     const [totalImages, imageStats] = await Promise.all([
       prisma.image.count(),
       prisma.image.aggregate({
@@ -25,14 +23,12 @@ async function getDatabaseStats(): Promise<void> {
       }),
     ])
 
-    // Get recent activity
     const recentNotes = await prisma.note.findMany({
       take: 5,
       orderBy: { updatedAt: "desc" },
       select: { slug: true, updatedAt: true },
     })
 
-    // Get disk usage
     let diskUsage = 0
     const uploadsDir = path.join(process.cwd(), "data", "uploads")
     if (existsSync(uploadsDir)) {
@@ -43,12 +39,10 @@ async function getDatabaseStats(): Promise<void> {
           const stats = await stat(filePath)
           diskUsage += stats.size
         } catch (error) {
-          // Ignore errors for individual files
         }
       }
     }
 
-    // Display statistics
     console.log("📝 NOTES")
     console.log(`   Total notes: ${totalNotes}`)
     console.log(`   With secrets: ${notesWithSecrets}`)
@@ -75,7 +69,6 @@ async function getDatabaseStats(): Promise<void> {
       }
     }
 
-    // Get content statistics
     const contentStats = await prisma.note.findMany({
       select: { content: true },
     })
@@ -97,7 +90,6 @@ async function getDatabaseStats(): Promise<void> {
   }
 }
 
-// Run stats if called directly
 if (require.main === module) {
   getDatabaseStats()
 }

@@ -6,7 +6,6 @@ import { PUT } from "@/app/api/notes/[slug]/route"
 import { prisma } from "@/lib/db"
 import { broadcastNoteUpdate } from "@/lib/socket"
 
-// Mock dependencies
 jest.mock("@/lib/db")
 jest.mock("@/lib/socket")
 
@@ -71,7 +70,7 @@ describe("/api/notes/[slug] with Socket.IO", () => {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contentRich: "<p>Original content</p>", // Same as existing
+          contentRich: "<p>Original content</p>",
           contentFormat: "rich",
         }),
       })

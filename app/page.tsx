@@ -110,13 +110,11 @@ export default function HomePage() {
       />
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4 animate-in fade-in duration-500">
       <div className="w-full max-w-md space-y-8">
-        {/* Header */}
         <div className="text-center space-y-2 animate-in slide-in-from-top-4 duration-700">
           <h1 className="text-4xl font-bold tracking-tight">Minipad</h1>
           <p className="text-muted-foreground">Simple online notepad with real-time collaboration</p>
         </div>
 
-        {/* Quick Actions */}
         <Card className="border-0 shadow-lg bg-card/95 backdrop-blur animate-in slide-in-from-bottom-4 duration-700 delay-200">
           <CardContent className="p-6 space-y-6">
             <div className="space-y-4">
@@ -196,7 +194,6 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Features */}
         <div className="grid grid-cols-2 gap-3 text-center animate-in slide-in-from-bottom-4 duration-700 delay-500">
           <div className="space-y-2 transition-transform hover:scale-105 duration-200">
             <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mx-auto transition-colors hover:bg-primary/20">

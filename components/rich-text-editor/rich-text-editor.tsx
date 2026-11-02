@@ -41,7 +41,6 @@ import {
 } from './rich-text-editor.utils'
 import { ErrorBoundary } from '@/components/error-boundary'
 
-// Import lazy-loaded syntax highlighting
 import { lowlight, loadLanguage, LANGUAGE_OPTIONS } from '@/lib/syntax-highlighting'
 
 export interface RichTextEditorProps {
@@ -93,7 +92,6 @@ export function RichTextEditor({
     [toast]
   )
 
-  // Handle image download
   const handleImageDownload = useCallback(
     (src: string, filename: string) => {
       try {
@@ -113,18 +111,15 @@ export function RichTextEditor({
     [toast]
   )
 
-  // Create enhanced image extension (memoized)
   const EnhancedImage = useMemo(
     () => createEnhancedImageExtension(handleImageCopy, handleImageDownload),
     [handleImageCopy, handleImageDownload]
   )
 
-  // Handle upload start
   const handleUploadStart = useCallback(() => {
     setIsUploadingImage(true)
   }, [])
 
-  // Handle upload completion
   const handleUploadComplete = useCallback(
     (success: boolean, message?: string) => {
       setIsUploadingImage(false)
@@ -144,7 +139,6 @@ export function RichTextEditor({
     [toast]
   )
 
-  // Create paste extension (memoized)
   const pasteExtension = useMemo(
     () => createPasteExtension(slug, secret, handleUploadStart, handleUploadComplete),
     [slug, secret, handleUploadStart, handleUploadComplete]
@@ -164,7 +158,7 @@ export function RichTextEditor({
           keepMarks: true,
           keepAttributes: false,
         },
-        codeBlock: false, // Disable default code block to use CodeBlockLowlight
+        codeBlock: false,
       }),
       CodeBlockLowlight.configure({
         lowlight,
@@ -179,7 +173,7 @@ export function RichTextEditor({
     ],
     content,
     editable,
-    immediatelyRender: false, // Fix SSR hydration mismatch
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       try {
         const html = editor.getHTML()
@@ -196,12 +190,10 @@ export function RichTextEditor({
     },
   })
 
-  // Update content when prop changes (for real-time sync) with deep equality check
   useEffect(() => {
     if (!editor) return
     
     const currentContent = editor.getHTML()
-    // Normalize content for comparison (remove extra whitespace)
     const normalizeContent = (html: string) => html.replace(/\s+/g, ' ').trim()
     const normalizedCurrent = normalizeContent(currentContent)
     const normalizedNew = normalizeContent(content)
@@ -258,7 +250,6 @@ export function RichTextEditor({
   const setCodeBlockLanguage = useCallback(
     async (language: string | null) => {
       if (language) {
-        // Load the language dynamically if needed
         await loadLanguage(language)
         editor?.chain().focus().setCodeBlock({ language }).run()
       } else {
@@ -271,7 +262,6 @@ export function RichTextEditor({
   const redo = useCallback(() => editor?.chain().focus().redo().run(), [editor])
 
   const addImage = useCallback(async () => {
-    // Create file input for image selection
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
@@ -286,7 +276,6 @@ export function RichTextEditor({
       try {
         const uploadedImage = await uploadImageFromPaste(file, slug, secret)
 
-        // Insert the uploaded image into the editor
         editor
           ?.chain()
           .focus()

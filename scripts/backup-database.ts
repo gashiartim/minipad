@@ -30,13 +30,11 @@ async function createBackup(): Promise<void> {
   try {
     console.log("🔄 Starting database backup...")
 
-    // Ensure backup directory exists
     const backupDir = path.join(process.cwd(), "backups")
     if (!existsSync(backupDir)) {
       await mkdir(backupDir, { recursive: true })
     }
 
-    // Fetch all data
     const [notes, images] = await Promise.all([
       prisma.note.findMany({
         orderBy: { createdAt: "asc" },
@@ -46,7 +44,6 @@ async function createBackup(): Promise<void> {
       }),
     ])
 
-    // Create backup data
     const backupData: BackupData = {
       version: "1.0.0",
       timestamp: new Date().toISOString(),
@@ -61,12 +58,10 @@ async function createBackup(): Promise<void> {
       })),
     }
 
-    // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
     const filename = `backup-${timestamp}.json`
     const filepath = path.join(backupDir, filename)
 
-    // Write backup file
     await writeFile(filepath, JSON.stringify(backupData, null, 2), "utf-8")
 
     console.log(`✅ Backup created successfully: ${filename}`)
@@ -80,7 +75,6 @@ async function createBackup(): Promise<void> {
   }
 }
 
-// Run backup if called directly
 if (require.main === module) {
   createBackup()
 }

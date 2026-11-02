@@ -1,9 +1,7 @@
 import { createLowlight } from 'lowlight'
 
-// Create lowlight instance
 export const lowlight = createLowlight()
 
-// Language loaders for lazy loading
 const languageLoaders: Record<string, () => Promise<{ default: unknown }>> = {
   javascript: () => import('highlight.js/lib/languages/javascript'),
   typescript: () => import('highlight.js/lib/languages/typescript'),
@@ -28,13 +26,10 @@ const languageLoaders: Record<string, () => Promise<{ default: unknown }>> = {
   sql: () => import('highlight.js/lib/languages/sql'),
 }
 
-// Cache for loaded languages
 const loadedLanguages = new Set<string>()
 
-// Load core languages immediately (commonly used)
 const coreLanguages = ['javascript', 'typescript', 'python', 'json']
 
-// Load a language dynamically
 export async function loadLanguage(language: string): Promise<void> {
   if (loadedLanguages.has(language)) {
     return
@@ -50,7 +45,6 @@ export async function loadLanguage(language: string): Promise<void> {
     const hlModule = await loader()
     const languageDefinition = hlModule.default
 
-    // Register with lowlight
             if (language === 'xml') {
       lowlight.register({ html: languageDefinition as never })
     } else {
@@ -63,10 +57,8 @@ export async function loadLanguage(language: string): Promise<void> {
   }
 }
 
-// Load core languages immediately
 Promise.all(coreLanguages.map(loadLanguage)).catch(console.error)
 
-// Language options with lazy loading
 export const LANGUAGE_OPTIONS = [
   { value: null, label: 'Plain Text' },
   { value: 'javascript', label: 'JavaScript' },

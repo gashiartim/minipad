@@ -4,13 +4,11 @@ import Image from '@tiptap/extension-image'
 import { validateImage, validatePastedContent } from '@/lib/validation'
 import { TIMING, CODE_DETECTION, ERROR_MESSAGES } from '@/lib/constants'
 
-// Custom image upload function with validation
 export async function uploadImageFromPaste(
   file: File,
   slug: string,
   secret?: string
 ) {
-  // Validate the image before upload
   const validation = await validateImage(file)
   if (!validation.isValid) {
     throw new Error(validation.error || ERROR_MESSAGES.INVALID_FILE_TYPE)
@@ -49,10 +47,8 @@ export async function uploadImageFromPaste(
   return await response.json()
 }
 
-// Helper function to copy image to clipboard with validation
 export async function copyImageToClipboard(imageSrc: string): Promise<boolean> {
   try {
-    // Validate URL to prevent potential security issues
     const url = new URL(imageSrc, window.location.origin)
     if (!url.pathname.startsWith('/i/')) {
       throw new Error('Invalid image source')
@@ -65,8 +61,7 @@ export async function copyImageToClipboard(imageSrc: string): Promise<boolean> {
     
     const blob = await response.blob()
     
-    // Validate blob size
-    if (blob.size > 10 * 1024 * 1024) { // 10MB limit
+    if (blob.size > 10 * 1024 * 1024) {
       throw new Error('Image too large to copy')
     }
 
@@ -77,7 +72,6 @@ export async function copyImageToClipboard(imageSrc: string): Promise<boolean> {
       await navigator.clipboard.write([clipboardItem])
       return true
     } else {
-      // Fallback for browsers that don't support ClipboardItem
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       const img = new window.Image()
@@ -112,7 +106,6 @@ export async function copyImageToClipboard(imageSrc: string): Promise<boolean> {
   }
 }
 
-// Helper function to download image
 export function downloadImage(imageSrc: string, filename: string) {
   const link = document.createElement('a')
   link.href = imageSrc
@@ -122,7 +115,6 @@ export function downloadImage(imageSrc: string, filename: string) {
   document.body.removeChild(link)
 }
 
-// Helper function to create resize handles
 function createResizeHandle(position: string): HTMLDivElement {
   const handle = document.createElement('div')
   handle.className = `absolute w-2 h-2 bg-blue-500 border border-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${position}`
@@ -130,7 +122,6 @@ function createResizeHandle(position: string): HTMLDivElement {
   return handle
 }
 
-// Helper function to create context menu
 function createContextMenu(
   x: number,
   y: number,
@@ -176,7 +167,6 @@ function createContextMenu(
   return contextMenu
 }
 
-// Enhanced image extension with resize and context menu support
 export const createEnhancedImageExtension = (
   onImageCopy: (src: string) => Promise<void>,
   onImageDownload: (src: string, filename: string) => void
@@ -219,12 +209,10 @@ export const createEnhancedImageExtension = (
         img.style.width = node.attrs.width ? `${node.attrs.width}px` : 'auto'
         img.style.height = node.attrs.height ? `${node.attrs.height}px` : 'auto'
 
-        // Resize handles
         const resizeHandles = document.createElement('div')
         resizeHandles.className =
           'absolute inset-0 pointer-events-none group-hover:pointer-events-auto'
 
-        // Create resize handles
         const handles = {
           se: createResizeHandle('bottom-0 right-0 cursor-se-resize'),
           sw: createResizeHandle('bottom-0 left-0 cursor-sw-resize'),
@@ -236,7 +224,6 @@ export const createEnhancedImageExtension = (
           resizeHandles.appendChild(handle)
         )
 
-        // Resize functionality with debouncing
         let isResizing = false
         let startX = 0
         let startY = 0
@@ -266,7 +253,6 @@ export const createEnhancedImageExtension = (
           let newWidth = startWidth
           let newHeight = startHeight
 
-          // Calculate new dimensions based on direction
           if (handles.se || handles.ne) {
             newWidth = startWidth + deltaX
           } else {
@@ -279,7 +265,6 @@ export const createEnhancedImageExtension = (
             newHeight = startHeight - deltaY
           }
 
-          // Maintain aspect ratio
           const aspectRatio = startWidth / startHeight
           if (Math.abs(deltaX) > Math.abs(deltaY)) {
             newHeight = newWidth / aspectRatio
@@ -287,7 +272,6 @@ export const createEnhancedImageExtension = (
             newWidth = newHeight * aspectRatio
           }
 
-          // Apply minimum size
           newWidth = Math.max(50, newWidth)
           newHeight = Math.max(50, newHeight)
 
@@ -300,12 +284,10 @@ export const createEnhancedImageExtension = (
           document.removeEventListener('mousemove', handleResize)
           document.removeEventListener('mouseup', stopResize)
 
-          // Clear any pending resize timeout
           if (resizeTimeout) {
             clearTimeout(resizeTimeout)
           }
 
-          // Update the node attributes (debounced)
           resizeTimeout = setTimeout(() => {
             const pos = getPos()
             if (pos !== undefined) {
@@ -320,13 +302,11 @@ export const createEnhancedImageExtension = (
           }, TIMING.DEBOUNCE_RESIZE_DELAY)
         }
 
-        // Add event listeners to handles
         handles.se.addEventListener('mousedown', (e) => startResize(e))
         handles.sw.addEventListener('mousedown', (e) => startResize(e))
         handles.ne.addEventListener('mousedown', (e) => startResize(e))
         handles.nw.addEventListener('mousedown', (e) => startResize(e))
 
-        // Keyboard shortcuts
         img.addEventListener('keydown', (e) => {
           if (e.key === 'Delete' || e.key === 'Backspace') {
             e.preventDefault()
@@ -337,15 +317,12 @@ export const createEnhancedImageExtension = (
           }
         })
 
-        // Make image focusable for keyboard shortcuts
         img.tabIndex = 0
 
-        // Click to focus
         img.addEventListener('click', () => {
           img.focus()
         })
 
-        // Context menu
         img.addEventListener('contextmenu', (e) => {
           e.preventDefault()
           
@@ -366,7 +343,6 @@ export const createEnhancedImageExtension = (
 
           document.body.appendChild(contextMenu)
 
-          // Remove context menu when clicking elsewhere
           const removeMenu = () => {
             if (document.body.contains(contextMenu)) {
               document.body.removeChild(contextMenu)
@@ -389,64 +365,49 @@ export const createEnhancedImageExtension = (
   })
 }
 
-// Helper function to detect if text is likely code with improved validation
 function isLikelyCode(text: string): { isCode: boolean; language: string | null } {
-  // Remove leading/trailing whitespace for analysis
   const trimmedText = text.trim()
   
-  // Too short to be meaningful code
   if (trimmedText.length < CODE_DETECTION.MIN_LENGTH) {
     return { isCode: false, language: null }
   }
   
-  // Validate content to prevent potential issues
   const validation = validatePastedContent(trimmedText)
   if (!validation.isValid) {
     return { isCode: false, language: null }
   }
   
-  // Check for common code patterns
   const codeIndicators = [
-    // JavaScript/TypeScript patterns
     /^(import|export|const|let|var|function|class|interface|type)\s/m,
     /=>\s*\{/,
     /console\.(log|error|warn)/,
     /\.then\s*\(/,
     /Promise\./,
     
-    // Python patterns
     /^(def|class|import|from|if __name__|print\s*\()/m,
     /:\s*\n\s{4,}/,
     
-    // Java patterns
     /public\s+(static\s+)?void\s+main/,
     /public\s+class\s+\w+/,
     /System\.out\.print/,
     
-    // C/C++ patterns
     /#include\s*<\w+>/,
     /int\s+main\s*\(/,
     /printf\s*\(/,
     
-    // HTML patterns
     /^<(!DOCTYPE|html|head|body|div|span|p|a|img)/im,
     /<\/\w+>/,
     
-    // CSS patterns
     /\{\s*\n\s*[\w-]+\s*:\s*[^;]+;/,
     /^[\w\-\.#]+\s*\{/m,
     
-    // SQL patterns
     /^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s/im,
     
-    // Shell/Bash patterns
     /^(#!\/bin\/|sudo|npm|git|docker|cd|ls|mkdir)/m,
     
-    // JSON pattern
     /^\s*\{\s*"[\w-]+"\s*:\s*["\{\[]]/,
   ]
   
-  // Language detection patterns
   const languagePatterns = [
     { pattern: /^(import|export|const|let|var|function|class)\s/m, language: 'javascript' },
     { pattern: /(interface|type\s+\w+\s*=|as\s+\w+)/m, language: 'typescript' },
@@ -460,10 +421,8 @@ function isLikelyCode(text: string): { isCode: boolean; language: string | null 
     { pattern: /^\s*\{\s*"[\w-]+"\s*:/m, language: 'json' },
   ]
   
-  // Check if text contains code patterns
   const hasCodePatterns = codeIndicators.some(pattern => pattern.test(trimmedText))
   
-  // Additional heuristics
   const lines = trimmedText.split('\n')
   const hasIndentation = lines.some(line => /^\s{2,}/.test(line))
   const hasBraces = /[\{\}]/.test(trimmedText)
@@ -480,7 +439,6 @@ function isLikelyCode(text: string): { isCode: boolean; language: string | null 
   
   const isCode = codeScore >= CODE_DETECTION.SCORE_THRESHOLD
   
-  // Detect language if it's code
   let language = null
   if (isCode) {
     for (const { pattern, language: lang } of languagePatterns) {
@@ -494,7 +452,6 @@ function isLikelyCode(text: string): { isCode: boolean; language: string | null 
   return { isCode, language }
 }
 
-// Custom paste extension with enhanced validation and error handling
 export const createPasteExtension = (
   slug: string,
   secret: string | undefined,
@@ -516,7 +473,6 @@ export const createPasteExtension = (
                   .clipboardData
               if (!clipboardData) return false
 
-              // Check for images first
               const items = Array.from(
                 clipboardData.items
               ) as DataTransferItem[]
@@ -525,7 +481,6 @@ export const createPasteExtension = (
               )
 
               if (imageItems.length > 0) {
-                // Limit number of simultaneous uploads
                 const maxUploads = Math.min(imageItems.length, 5)
                 const uploadPromises: Promise<void>[] = []
 
@@ -539,7 +494,6 @@ export const createPasteExtension = (
                     onUploadStart()
 
                     try {
-                      // Validate file before upload
                       const validation = await validateImage(file)
                       if (!validation.isValid) {
                         throw new Error(validation.error || ERROR_MESSAGES.INVALID_FILE_TYPE)
@@ -551,7 +505,6 @@ export const createPasteExtension = (
                         secret
                       )
 
-                    // Insert the uploaded image into the editor
                     const { tr } = view.state
                     const imageNode = view.state.schema.nodes.image?.create({
                       src: `/i/${uploadedImage.path}`,
@@ -578,16 +531,13 @@ export const createPasteExtension = (
                   uploadPromises.push(uploadPromise)
                 }
 
-                // Wait for all uploads to complete
                 Promise.all(uploadPromises).catch(console.error)
 
-                return true // Prevent default paste behavior
+                return true
               }
 
-              // Check for text that might be code
               const text = clipboardData.getData('text/plain')
               if (text && text.length > 0) {
-                // Validate and sanitize pasted text content
                 const validation = validatePastedContent(text)
                 if (!validation.isValid) {
                   console.warn('Invalid pasted content:', validation.error)
@@ -597,7 +547,6 @@ export const createPasteExtension = (
                 const { isCode, language } = isLikelyCode(validation.sanitized)
                 
                 if (isCode) {
-                  // Create a code block with the detected language
                   const { tr } = view.state
                   const codeBlockNode = view.state.schema.nodes.codeBlock?.create(
                     language ? { language } : {},
@@ -608,12 +557,12 @@ export const createPasteExtension = (
                     const insertPos = view.state.selection.from
                     tr.replaceWith(insertPos, insertPos, codeBlockNode)
                     view.dispatch(tr)
-                    return true // Prevent default paste behavior
+                    return true
                   }
                 }
               }
 
-              return false // Allow default paste behavior for non-code text
+              return false
             },
           },
         }),

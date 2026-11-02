@@ -21,21 +21,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { slug } = await params
 
-    // Check rate limit first
     const rateLimitResult = checkRateLimit(request)
     if (!rateLimitResult.allowed) {
       logRequest(request, 429, startTime)
       return rateLimitResult.response!
     }
 
-    // Validate slug
     const slugValidation = slugSchema.safeParse(slug)
     if (!slugValidation.success) {
       logRequest(request, 400, startTime)
       return createErrorResponse("Invalid slug format", "INVALID_SLUG", 400)
     }
 
-    // Find the note
     const note = await prisma.note.findUnique({
       where: { slug },
       include: {
@@ -53,7 +50,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return createErrorResponse("Maximum images per note exceeded", "TOO_MANY_IMAGES", 400)
     }
 
-    // Parse form data with size limit
     const contentLength = request.headers.get("content-length")
     if (contentLength && Number.parseInt(contentLength) > 12 * 1024 * 1024) {
       logRequest(request, 413, startTime)
@@ -69,45 +65,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return createErrorResponse("No file provided", "NO_FILE", 400)
     }
 
-    // Check secret if note is protected
     if (note.secret && note.secret !== secret) {
       logRequest(request, 403, startTime)
       return createErrorResponse("Invalid or missing secret", "FORBIDDEN", 403)
     }
 
-    // Validate file type
     if (!allowedImageTypes.includes(file.type as AllowedImageMime)) {
       logRequest(request, 415, startTime)
       return createErrorResponse("Invalid file type", "INVALID_TYPE", 415)
     }
 
-    // Validate file size
     if (file.size > maxImageSize) {
       logRequest(request, 413, startTime)
       return createErrorResponse("File too large", "FILE_TOO_LARGE", 413)
     }
 
-    // Read file buffer
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    // Generate filename
     const filename = generateImageFilename(buffer, file.name)
 
-    // Ensure uploads directory exists
     const uploadsDir = await ensureUploadsDir()
     const filePath = path.join(uploadsDir, filename)
 
-    // Write file to disk
     await writeFile(filePath, new Uint8Array(buffer))
 
-    // Create image record in database
     const image = await prisma.image.create({
       data: {
         noteId: note.id,
         path: filename,
         mime: file.type,
         sizeBytes: file.size,
-        // width and height will be null for now (could add sharp later)
       },
     })
 

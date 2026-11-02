@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    // Check rate limit first
     const rateLimitResult = checkRateLimit(request)
     if (!rateLimitResult.allowed) {
       logRequest(request, 429, startTime)
@@ -37,7 +36,6 @@ export async function POST(request: NextRequest) {
     const { slug: providedSlug, content, secret } = validation.data
     const slug = providedSlug || generateSlug()
 
-    // Check if slug already exists
     const existingNote = await prisma.note.findUnique({
       where: { slug },
     })
@@ -47,7 +45,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse("Slug already exists", "SLUG_EXISTS", 409)
     }
 
-    // Create the note
     const note = await prisma.note.create({
       data: {
         slug,

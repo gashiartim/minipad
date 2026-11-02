@@ -7,12 +7,10 @@ async function exportNotes(): Promise<void> {
   try {
     console.log("🔄 Starting notes export...")
 
-    // Create export directory
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
     const exportDir = path.join(process.cwd(), "exports", `export-${timestamp}`)
     await mkdir(exportDir, { recursive: true })
 
-    // Fetch all notes with images
     const notes = await prisma.note.findMany({
       include: {
         images: true,
@@ -22,19 +20,16 @@ async function exportNotes(): Promise<void> {
 
     console.log(`📊 Found ${notes.length} notes to export`)
 
-    // Export each note as markdown
     for (const note of notes) {
       const noteDir = path.join(exportDir, note.slug)
       await mkdir(noteDir, { recursive: true })
 
-      // Create markdown content
       let markdown = `# ${note.slug}\n\n`
       markdown += `**Created:** ${note.createdAt.toISOString()}\n`
       markdown += `**Updated:** ${note.updatedAt.toISOString()}\n\n`
       markdown += `---\n\n`
       markdown += note.content
 
-      // Add images section if any
       if (note.images.length > 0) {
         markdown += `\n\n## Images\n\n`
         for (const image of note.images) {
@@ -46,7 +41,6 @@ async function exportNotes(): Promise<void> {
           markdown += `*\n\n`
         }
 
-        // Copy image files
         const imagesDir = path.join(noteDir, "images")
         await mkdir(imagesDir, { recursive: true })
 
@@ -62,12 +56,10 @@ async function exportNotes(): Promise<void> {
         }
       }
 
-      // Write markdown file
       const markdownPath = path.join(noteDir, `${note.slug}.md`)
       await writeFile(markdownPath, markdown, "utf-8")
     }
 
-    // Create index file
     let indexContent = `# Notes Export\n\n`
     indexContent += `**Export Date:** ${new Date().toISOString()}\n`
     indexContent += `**Total Notes:** ${notes.length}\n\n`
@@ -94,7 +86,6 @@ async function exportNotes(): Promise<void> {
   }
 }
 
-// Run export if called directly
 if (require.main === module) {
   exportNotes()
 }

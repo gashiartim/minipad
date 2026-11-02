@@ -49,7 +49,6 @@ app.prepare().then(() => {
     })
   })
 
-  // Make io accessible globally
   global.io = io
 
   server.listen(port, (err) => {

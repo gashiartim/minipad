@@ -6,7 +6,6 @@ import { NextRequest } from "next/server"
 import { POST } from "@/app/api/notes/route"
 import { prisma } from "@/lib/db"
 
-// Mock the database and Socket.IO
 jest.mock("@/lib/db")
 jest.mock("@/lib/socket", () => ({
   broadcastNoteUpdate: jest.fn(),
@@ -17,7 +16,6 @@ const mockPrisma = prisma as jest.Mocked<typeof prisma>
 describe("/api/notes", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    // Reset fetch mock
     ;(global.fetch as jest.Mock).mockClear()
   })
 
@@ -105,7 +103,7 @@ describe("/api/notes", () => {
       const request = new NextRequest("http://localhost:3000/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: "ab" }), // too short
+        body: JSON.stringify({ slug: "ab" }),
       })
 
       const response = await POST(request)

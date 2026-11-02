@@ -1,7 +1,6 @@
 import { getSocket, resetSocketClient } from "@/lib/socket-client"
 import { io } from "socket.io-client"
 
-// Mock socket.io-client
 jest.mock("socket.io-client")
 const mockIo = io as jest.MockedFunction<typeof io>
 
@@ -25,7 +24,6 @@ describe("Socket.IO client utilities", () => {
   })
 
   afterEach(() => {
-    // Reset any global socket state
     jest.resetModules()
   })
 

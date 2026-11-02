@@ -24,7 +24,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const url = new URL(request.url)
     const providedSecret = url.searchParams.get("secret")
 
-    // Validate slug
     const slugValidation = slugSchema.safeParse(slug)
     if (!slugValidation.success) {
       logRequest(request, 400, startTime)
@@ -53,13 +52,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return createErrorResponse("Note not found", "NOT_FOUND", 404)
     }
 
-    // If note is protected and no secret provided, return 401
     if (note.secret && note.secret !== providedSecret) {
       logRequest(request, 401, startTime)
       return createErrorResponse("Authentication required", "AUTH_REQUIRED", 401)
     }
 
-    // Don't return the secret in the response
     const { secret, ...noteData } = note
     void secret
 
@@ -78,7 +75,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { slug } = await params
 
-    // Check rate limit first
     const rateLimitResult = checkRateLimit(request)
     if (!rateLimitResult.allowed) {
       logRequest(request, 429, startTime)
@@ -90,7 +86,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return createErrorResponse("Request too large", "REQUEST_TOO_LARGE", 413)
     }
 
-    // Validate slug
     const slugValidation = slugSchema.safeParse(slug)
     if (!slugValidation.success) {
       logRequest(request, 400, startTime)
@@ -107,7 +102,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { content, contentRich, contentFormat, secret } = validation.data
 
-    // Find the note
     const existingNote = await prisma.note.findUnique({
       where: { slug },
     })
@@ -117,7 +111,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return createErrorResponse("Note not found", "NOT_FOUND", 404)
     }
 
-    // Check secret if note is protected
     if (existingNote.secret && existingNote.secret !== secret) {
       logRequest(request, 403, startTime)
       return createErrorResponse("Invalid or missing secret", "FORBIDDEN", 403)
@@ -136,7 +129,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    // Prepare update data
     const updateData: Prisma.NoteUpdateInput = {
       updatedAt: new Date(),
     }
@@ -145,13 +137,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (contentRich !== undefined) updateData.contentRich = contentRich
     if (contentFormat !== undefined) updateData.contentFormat = contentFormat
 
-    // Update the note
     const updatedNote = await prisma.note.update({
       where: { slug },
       data: updateData,
     })
 
-    // Broadcast update to connected clients
     broadcastNoteUpdate(slug, {
       type: "content_update",
       content: updatedNote.content,

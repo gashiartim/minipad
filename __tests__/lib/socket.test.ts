@@ -7,13 +7,11 @@ describe("Socket.IO utilities", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     
-    // Mock Socket.IO server
     mockSocketIO = {
       to: jest.fn().mockReturnThis(),
       emit: jest.fn(),
     } as any
 
-    // Mock global io
     ;(globalThis as any).io = mockSocketIO
   })
 
@@ -53,7 +51,6 @@ describe("Socket.IO utilities", () => {
     it("should handle missing Socket.IO gracefully", () => {
       ;(globalThis as any).io = undefined
       
-      // Mock console.warn to verify it's called
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation()
       
       expect(() => {

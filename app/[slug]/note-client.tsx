@@ -51,13 +51,11 @@ export function NoteClient({ slug }: NoteClientProps) {
   const router = useRouter()
   const { toast } = useToast()
 
-  // Refs for frequently changing values to stabilize callbacks
   const hasUnsavedChangesRef = useRef(hasUnsavedChanges)
   const contentRichRef = useRef(contentRich)
   const isSavingRef = useRef(isSaving)
   const isUpdatingLocallyRef = useRef(isUpdatingLocally)
   
-  // Keep refs up to date
   useEffect(() => {
     hasUnsavedChangesRef.current = hasUnsavedChanges
     contentRichRef.current = contentRich
@@ -65,20 +63,15 @@ export function NoteClient({ slug }: NoteClientProps) {
     isUpdatingLocallyRef.current = isUpdatingLocally
   }, [hasUnsavedChanges, contentRich, isSaving, isUpdatingLocally])
 
-  // Real-time synchronization
   const { isConnected: isRealtimeConnected } = useRealtimeNoteSocket({
     slug,
     secret,
     enabled: isAuthenticated,
     onUpdate: useCallback((update) => {
       if (update.type === "content_update") {
-        // Check for conflicts: if user has unsaved changes when remote update arrives
         const updateContent = update.contentRich || ""
         
-        // Only prevent updates if there are unsaved changes AND the content is significantly different
-        // Allow updates if we're currently making local changes (formatting buttons) or saving
         if (hasUnsavedChangesRef.current && contentRichRef.current !== updateContent && !isSavingRef.current && !isUpdatingLocallyRef.current) {
-          // Additional check: if the update seems to be our own change (same base content), allow it
           const strippedLocal = contentRichRef.current.replace(/<[^>]*>/g, '').trim()
           const strippedUpdate = updateContent.replace(/<[^>]*>/g, '').trim()
           
@@ -88,13 +81,12 @@ export function NoteClient({ slug }: NoteClientProps) {
               description: ERROR_MESSAGES.CONTENT_SYNC_CONFLICT,
               variant: "default",
             })
-            return // Don't overwrite local changes
+            return
           }
         }
         
         setIsUpdatingFromRemote(true)
         
-        // Update rich content
         if (update.contentRich !== undefined) {
           setContentRich(update.contentRich)
         }
@@ -103,13 +95,13 @@ export function NoteClient({ slug }: NoteClientProps) {
           ...prev, 
           content: update.content || prev.content,
           contentRich: update.contentRich || prev.contentRich,
-          contentFormat: "rich", // Always use rich format now
+          contentFormat: "rich",
           updatedAt: update.updatedAt || prev.updatedAt 
         } : null)
         setHasUnsavedChanges(false)
         setTimeout(() => setIsUpdatingFromRemote(false), TIMING.SYNC_ANIMATION_DURATION)
       }
-    }, [toast]) // Only toast dependency - everything else uses refs
+    }, [toast])
   })
 
   const fetchNote = useCallback(async (providedSecret?: string) => {
@@ -182,11 +174,9 @@ export function NoteClient({ slug }: NoteClientProps) {
   const saveNote = useCallback(async () => {
     if (!note || isSaving || !isAuthenticated) return
 
-    // Capture current content for optimistic update
     const contentRichToSave = contentRich
     
     setIsSaving(true)
-    // Optimistic update
     setHasUnsavedChanges(false)
     setLastSaved(new Date())
     
@@ -195,7 +185,6 @@ export function NoteClient({ slug }: NoteClientProps) {
         secret: secret || undefined,
         contentRich: contentRichToSave,
         contentFormat: "rich",
-        // Also save plain text version for fallback (strip HTML)
         content: contentRichToSave.replace(/<[^>]*>/g, '')
       }
       
@@ -208,11 +197,9 @@ export function NoteClient({ slug }: NoteClientProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        // Revert optimistic update on error
         setHasUnsavedChanges(contentRich !== note.contentRich)
         setLastSaved(null)
         
-        // If authentication fails, show login screen again
         if (response.status === 403) {
           setIsAuthenticated(false)
           setNeedsAuth(true)
@@ -228,7 +215,6 @@ export function NoteClient({ slug }: NoteClientProps) {
         return
       }
 
-      // Update with server response
       setNote((prev) => (prev ? { 
         ...prev, 
         content: contentRichToSave.replace(/<[^>]*>/g, ''),
@@ -237,7 +223,6 @@ export function NoteClient({ slug }: NoteClientProps) {
         updatedAt: data.updatedAt 
       } : null))
       
-      // Only show success toast if we're not in the middle of real-time updates
       if (!isUpdatingFromRemote) {
         toast({
           title: "Saved",
@@ -245,7 +230,6 @@ export function NoteClient({ slug }: NoteClientProps) {
         })
       }
     } catch {
-      // Revert optimistic update
       setHasUnsavedChanges(contentRich !== note.contentRich)
       setLastSaved(null)
       
@@ -259,7 +243,6 @@ export function NoteClient({ slug }: NoteClientProps) {
     }
   }, [note, contentRich, secret, slug, toast, isSaving, isAuthenticated, isUpdatingFromRemote])
 
-  // Auto-save with debounce
   useEffect(() => {
     if (!autosaveEnabled || !hasUnsavedChanges || !note) return
 
@@ -270,7 +253,6 @@ export function NoteClient({ slug }: NoteClientProps) {
     return () => clearTimeout(timer)
   }, [contentRich, hasUnsavedChanges, autosaveEnabled, saveNote, note])
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
@@ -288,18 +270,15 @@ export function NoteClient({ slug }: NoteClientProps) {
   }, [fetchNote])
 
   const handleRichContentChange = (value: string) => {
-    // Don't mark as unsaved if this is from a remote update
     if (isUpdatingFromRemote) return
     
     setIsUpdatingLocally(true)
     setContentRich(value)
     setHasUnsavedChanges(true)
     
-    // Clear the local update flag after a brief delay
     setTimeout(() => setIsUpdatingLocally(false), TIMING.LOCAL_UPDATE_CLEAR_DELAY)
   }
 
-  // Show login screen if authentication is needed
   if (needsAuth && !isAuthenticated) {
     return (
       <NoteLogin 
@@ -314,7 +293,6 @@ export function NoteClient({ slug }: NoteClientProps) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 animate-in fade-in duration-500">
-        {/* Loading header */}
         <div className="border-b border-border/50 bg-background/95 backdrop-blur">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
@@ -333,7 +311,6 @@ export function NoteClient({ slug }: NoteClientProps) {
           </div>
         </div>
 
-        {/* Loading content */}
         <main className="max-w-4xl mx-auto p-4">
           <div className="bg-background/95 backdrop-blur border border-border/50 rounded-lg shadow-sm animate-in slide-in-from-bottom-4 duration-700 delay-200">
             <div className="p-6 space-y-4">
@@ -345,7 +322,6 @@ export function NoteClient({ slug }: NoteClientProps) {
             </div>
           </div>
 
-          {/* Loading footer */}
           <div className="mt-6 animate-in slide-in-from-bottom-4 duration-700 delay-500">
             <Skeleton className="h-12 w-full rounded-lg animate-pulse" />
           </div>
@@ -360,7 +336,6 @@ export function NoteClient({ slug }: NoteClientProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 animate-in fade-in duration-500">
-      {/* Header with note title and controls */}
       <div className="border-b border-border/50 bg-background/95 backdrop-blur sticky top-0 z-10 animate-in slide-in-from-top-4 duration-700">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -437,7 +412,6 @@ export function NoteClient({ slug }: NoteClientProps) {
         </div>
       </div>
 
-      {/* Main content area */}
       <main className="max-w-4xl mx-auto p-4">
         <section className="bg-background/95 backdrop-blur border border-border/50 rounded-lg shadow-sm animate-in slide-in-from-bottom-4 duration-700 delay-200" aria-label="Note editor">
           <RichTextEditor
@@ -450,7 +424,6 @@ export function NoteClient({ slug }: NoteClientProps) {
           />
         </section>
 
-        {/* Metadata and image gallery */}
         <footer className="mt-6 space-y-4 animate-in slide-in-from-bottom-4 duration-700 delay-500">
           <div 
             className="flex items-center justify-between text-xs text-muted-foreground bg-background/50 backdrop-blur rounded-lg px-4 py-3 border border-border/30 transition-colors hover:bg-background/70"

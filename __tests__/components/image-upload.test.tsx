@@ -2,7 +2,6 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { ImageUpload } from "@/components/image-upload"
 
-// Mock the toast hook
 const mockToastFn = jest.fn()
 
 jest.mock("@/hooks/use-toast", () => ({
@@ -46,7 +45,6 @@ describe("ImageUpload", () => {
 
     await user.click(input)
 
-    // Simulate file selection
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     Object.defineProperty(fileInput, "files", {
       value: [file],
@@ -93,7 +91,6 @@ describe("ImageUpload", () => {
 
     render(<ImageUpload {...mockProps} />)
 
-    // Create a file larger than 10MB
     const largeFile = new File(["x".repeat(11 * 1024 * 1024)], "large.png", { type: "image/png" })
     const input = screen.getByRole("button", { name: /select files/i })
 

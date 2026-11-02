@@ -2,7 +2,6 @@ import { renderHook, act } from "@testing-library/react"
 import { useRealtimeNoteSocket } from "@/hooks/use-realtime-note-socket"
 import { getSocket } from "@/lib/socket-client"
 
-// Mock the socket client
 jest.mock("@/lib/socket-client")
 const mockGetSocket = getSocket as jest.MockedFunction<typeof getSocket>
 
@@ -58,7 +57,6 @@ describe("useRealtimeNoteSocket", () => {
       
       renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
-      // Should call handleConnect which emits join-note
       expect(mockSocket.emit).toHaveBeenCalledWith("join-note", "test-note")
     })
   })
@@ -67,7 +65,6 @@ describe("useRealtimeNoteSocket", () => {
     it("should update connection state on connect", () => {
       const { result } = renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
-      // Simulate socket connect event
       const connectHandler = mockSocket.on.mock.calls.find(
         call => call[0] === "connect"
       )?.[1]
@@ -84,13 +81,11 @@ describe("useRealtimeNoteSocket", () => {
     it("should update connection state on disconnect", () => {
       const { result } = renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
-      // First connect
       const connectHandler = mockSocket.on.mock.calls.find(
         call => call[0] === "connect"
       )?.[1]
       act(() => connectHandler?.())
 
-      // Then disconnect
       const disconnectHandler = mockSocket.on.mock.calls.find(
         call => call[0] === "disconnect"
       )?.[1]
@@ -122,7 +117,6 @@ describe("useRealtimeNoteSocket", () => {
     it("should call onUpdate when receiving note-update event", () => {
       renderHook(() => useRealtimeNoteSocket(getDefaultProps()))
 
-      // Get the note-update handler that was registered
       const updateHandler = mockSocket.on.mock.calls.find(
         call => call[0] === "note-update"
       )?.[1]
@@ -188,15 +182,12 @@ describe("useRealtimeNoteSocket", () => {
         { initialProps: { slug: "note-1" } }
       )
 
-      // Clear previous calls
       mockSocket.emit.mockClear()
       
       rerender({ slug: "note-2" })
 
-      // Should leave old room and join new room (may require checking call order)
       const emitCalls = mockSocket.emit.mock.calls
       expect(emitCalls.some(call => call[0] === "leave-note" && call[1] === "note-1")).toBe(true)
-      // Note: The join-note for note-2 might happen in the next effect cycle
     })
   })
 

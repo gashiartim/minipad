@@ -1,6 +1,5 @@
 import "@testing-library/jest-dom"
 
-// Mock Next.js router
 jest.mock("next/navigation", () => ({
   useRouter() {
     return {
@@ -20,10 +19,8 @@ jest.mock("next/navigation", () => ({
   },
 }))
 
-// Mock fetch globally
 global.fetch = jest.fn()
 
-// Mock file operations
 jest.mock("fs/promises", () => ({
   readFile: jest.fn(),
   writeFile: jest.fn(),
@@ -35,7 +32,6 @@ jest.mock("fs", () => ({
   existsSync: jest.fn(),
 }))
 
-// Mock Prisma
 jest.mock("@/lib/db", () => ({
   prisma: {
     note: {

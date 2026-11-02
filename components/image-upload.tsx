@@ -42,7 +42,6 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
   }
 
   const uploadFile = async (file: File) => {
-    // Validate file type
     const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"]
     if (!allowedTypes.includes(file.type)) {
       toast({
@@ -53,7 +52,6 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
       return
     }
 
-    // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "File too large", 
@@ -63,7 +61,6 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
       return
     }
 
-    // Validate file is not empty
     if (file.size === 0) {
       toast({
         title: "Empty file",

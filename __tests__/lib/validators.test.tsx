@@ -17,10 +17,10 @@ describe("Validators", () => {
     })
 
     it("should reject invalid slugs", () => {
-      expect(() => slugSchema.parse("ab")).toThrow() // too short
-      expect(() => slugSchema.parse("a".repeat(65))).toThrow() // too long
-      expect(() => slugSchema.parse("invalid slug")).toThrow() // spaces
-      expect(() => slugSchema.parse("invalid@slug")).toThrow() // special chars
+      expect(() => slugSchema.parse("ab")).toThrow()
+      expect(() => slugSchema.parse("a".repeat(65))).toThrow()
+      expect(() => slugSchema.parse("invalid slug")).toThrow()
+      expect(() => slugSchema.parse("invalid@slug")).toThrow()
     })
   })
 
@@ -32,8 +32,8 @@ describe("Validators", () => {
     })
 
     it("should reject invalid secrets", () => {
-      expect(() => secretSchema.parse("12345")).toThrow() // too short
-      expect(() => secretSchema.parse("a".repeat(129))).toThrow() // too long
+      expect(() => secretSchema.parse("12345")).toThrow()
+      expect(() => secretSchema.parse("a".repeat(129))).toThrow()
     })
   })
 

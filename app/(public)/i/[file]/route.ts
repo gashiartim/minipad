@@ -15,13 +15,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { file } = await params
 
-    // Prevent path traversal attacks
     if (file.includes("..") || file.includes("/") || file.includes("\\")) {
       logRequest(request, 400, startTime)
       return createErrorResponse("Invalid filename", "INVALID_FILENAME", 400)
     }
 
-    // Validate filename format (should match our generated format)
     const filenameRegex = /^[a-f0-9]{16}-[a-z0-9]{4}\.(png|jpg|jpeg|webp|gif)$/i
     if (!filenameRegex.test(file)) {
       logRequest(request, 400, startTime)
@@ -39,7 +37,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const filePath = path.join(process.cwd(), "data", "uploads", file)
 
-    // Check if file exists on disk
     if (!existsSync(filePath)) {
       logError(`File missing on disk: ${file}`, "GET /i/[file]")
       logRequest(request, 404, startTime)
@@ -64,7 +61,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    // Read file
     const buffer = await readFile(filePath)
 
     logRequest(request, 200, startTime)

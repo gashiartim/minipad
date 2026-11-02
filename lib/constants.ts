@@ -1,4 +1,3 @@
-// Application constants
 export const TIMING = {
   AUTOSAVE_DELAY: 1500,
   SYNC_ANIMATION_DURATION: 500,
@@ -9,7 +8,7 @@ export const TIMING = {
 } as const
 
 export const IMAGE_VALIDATION = {
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  MAX_FILE_SIZE: 10 * 1024 * 1024,
   MIN_DIMENSIONS: { width: 1, height: 1 },
   MAX_DIMENSIONS: { width: 4000, height: 4000 },
   ALLOWED_MIME_TYPES: [
@@ -27,7 +26,7 @@ export const FILE_SIGNATURES = {
   'image/jpeg': [0xFF, 0xD8, 0xFF],
   'image/png': [0x89, 0x50, 0x4E, 0x47],
   'image/gif': [0x47, 0x49, 0x46, 0x38],
-  'image/webp': [0x52, 0x49, 0x46, 0x46], // First 4 bytes, followed by "WEBP"
+  'image/webp': [0x52, 0x49, 0x46, 0x46],
 } as const
 
 export const ERROR_MESSAGES = {

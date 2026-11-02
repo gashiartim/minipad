@@ -31,7 +31,6 @@ export function useRealtimeNoteSocket({
   const onUpdateRef = useRef(onUpdate)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
-  // Keep ref up to date
   useEffect(() => {
     onUpdateRef.current = onUpdate
   }, [onUpdate])
@@ -40,15 +39,13 @@ export function useRealtimeNoteSocket({
     const socket = getSocket()
     setIsConnected(true)
     setLastError(null)
-    setReconnectAttempts(0) // Reset reconnect attempts on successful connection
+    setReconnectAttempts(0)
     
-    // Clear any pending reconnection timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
       reconnectTimeoutRef.current = null
     }
     
-    // Join the note room
     socket.emit("join-note", slug)
   }, [slug])
 
@@ -61,7 +58,6 @@ export function useRealtimeNoteSocket({
     setLastError("Connection failed")
     setIsConnected(false)
     
-    // Implement exponential backoff for reconnection
     const backoffDelay = Math.min(
       TIMING.WEBSOCKET_RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts),
       TIMING.WEBSOCKET_RECONNECT_MAX_DELAY
@@ -80,7 +76,7 @@ export function useRealtimeNoteSocket({
 
   const handleNoteUpdate = useCallback((data: RealtimeNoteUpdate) => {
     onUpdateRef.current?.(data)
-  }, []) // No dependencies - uses ref
+  }, [])
 
   useEffect(() => {
     if (!enabled) {
@@ -97,12 +93,10 @@ export function useRealtimeNoteSocket({
     socket.on("connect_error", handleConnectError)
     socket.on("note-update", handleNoteUpdate)
 
-    // If already connected, join immediately
     if (socket.connected) {
       handleConnect()
     }
 
-    // Cleanup function
     return () => {
       socket.off("connect", handleConnect)
       socket.off("disconnect", handleDisconnect)
@@ -110,7 +104,6 @@ export function useRealtimeNoteSocket({
       socket.off("note-update", handleNoteUpdate)
       socket.emit("leave-note", slug)
       
-      // Clear any pending reconnection timeout
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
         reconnectTimeoutRef.current = null
@@ -126,7 +119,6 @@ export function useRealtimeNoteSocket({
     setLastError(null)
     setReconnectAttempts(0)
     
-    // Clear any pending reconnection timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
       reconnectTimeoutRef.current = null

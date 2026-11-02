@@ -43,7 +43,7 @@ export const imageUploadSchema = z.object({
           )
           .refine((file) => file.size <= maxImageSize, 'File too large')
           .refine((file) => file.size > 0, 'File is empty')
-      : z.any(), // Fallback for server environment
+      : z.any(),
 })
 
 export const allowedImageTypes = [
@@ -56,13 +56,12 @@ export const allowedImageTypes = [
 
 export type AllowedImageMime = (typeof allowedImageTypes)[number]
 
-export const maxImageSize = 10 * 1024 * 1024 // 10MB
+export const maxImageSize = 10 * 1024 * 1024
 
 export function generateSlug(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let result = ''
 
-  // Use crypto for better randomness if available
   if (
     typeof globalThis !== 'undefined' &&
     globalThis.crypto &&
@@ -74,7 +73,6 @@ export function generateSlug(): string {
       result += chars.charAt((array[i] || 0) % chars.length)
     }
   } else {
-    // Fallback to Math.random
     for (let i = 0; i < 8; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
@@ -85,29 +83,28 @@ export function generateSlug(): string {
 
 export function sanitizeContent(content: string): string {
   return content
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocols
-    .replace(/\son\w+\s*=\s*['""][^'"]*['"]/gi, '') // Remove event handlers with values
-    .replace(/\son\w+\s*=\s*[^'"\s]+/gi, '') // Remove event handlers without quotes
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/\son\w+\s*=\s*['""][^'"]*['"]/gi, '')
+    .replace(/\son\w+\s*=\s*[^'"\s]+/gi, '')
     .trim()
 }
 
 export function sanitizeInput(input: string): string {
   return input
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/<[^>]*>/g, '')
     .trim()
 }
 
 export function isValidImageFilename(filename: string): boolean {
-  // Only allow our generated filename format
   const filenameRegex = /^[a-f0-9]{16}-[a-z0-9]{4}\.(png|jpg|jpeg|webp|gif)$/i
   return filenameRegex.test(filename) && !filename.includes('..')
 }
 
 export function sanitizeFilename(filename: string): string {
   return filename
-    .replace(/[^a-zA-Z0-9._-]/g, '') // Only allow safe characters
-    .replace(/\.{2,}/g, '.') // Replace multiple dots with single dot
-    .substring(0, 255) // Limit length
+    .replace(/[^a-zA-Z0-9._-]/g, '')
+    .replace(/\.{2,}/g, '.')
+    .substring(0, 255)
 }

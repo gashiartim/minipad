@@ -10,9 +10,6 @@ export interface ImageValidationResult extends ValidationResult {
   actualType?: string
 }
 
-/**
- * Validates file size
- */
 export function validateFileSize(file: File): ValidationResult {
   if (file.size > IMAGE_VALIDATION.MAX_FILE_SIZE) {
     return {
@@ -23,9 +20,6 @@ export function validateFileSize(file: File): ValidationResult {
   return { isValid: true }
 }
 
-/**
- * Validates file type based on MIME type and extension
- */
 export function validateFileType(file: File): ValidationResult {
   const mimeType = file.type.toLowerCase()
   const extension = file.name
@@ -57,9 +51,6 @@ export function validateFileType(file: File): ValidationResult {
   return { isValid: true }
 }
 
-/**
- * Validates file signature to prevent MIME type spoofing
- */
 export async function validateFileSignature(
   file: File
 ): Promise<ValidationResult> {
@@ -74,11 +65,10 @@ export async function validateFileSignature(
           return
         }
 
-        const bytes = new Uint8Array(buffer.slice(0, 12)) // Read first 12 bytes
+        const bytes = new Uint8Array(buffer.slice(0, 12))
         const mimeType = file.type.toLowerCase() as keyof typeof FILE_SIGNATURES
 
         if (!FILE_SIGNATURES[mimeType]) {
-          // For unsupported types, just validate MIME type
           resolve(validateFileType(file))
           return
         }
@@ -108,9 +98,6 @@ export async function validateFileSignature(
   })
 }
 
-/**
- * Validates image dimensions
- */
 export async function validateImageDimensions(
   file: File
 ): Promise<ImageValidationResult> {
@@ -158,20 +145,15 @@ export async function validateImageDimensions(
   })
 }
 
-/**
- * Comprehensive image validation
- */
 export async function validateImage(
   file: File
 ): Promise<ImageValidationResult> {
-  // Quick validations first
   const sizeCheck = validateFileSize(file)
   if (!sizeCheck.isValid) return sizeCheck
 
   const typeCheck = validateFileType(file)
   if (!typeCheck.isValid) return typeCheck
 
-  // Async validations
   const signatureCheck = await validateFileSignature(file)
   if (!signatureCheck.isValid) return signatureCheck
 
@@ -179,19 +161,13 @@ export async function validateImage(
   return dimensionsCheck
 }
 
-/**
- * Sanitizes HTML content to prevent XSS
- */
 export function sanitizeHtmlContent(html: string): string {
-  // Create a temporary div to parse HTML
   const tempDiv = document.createElement('div')
   tempDiv.innerHTML = html
 
-  // Remove script tags and event handlers
   const scripts = tempDiv.querySelectorAll('script')
   scripts.forEach((script) => script.remove())
 
-  // Remove dangerous attributes
   const allElements = tempDiv.querySelectorAll('*')
   allElements.forEach((element) => {
     Array.from(element.attributes).forEach((attr) => {
@@ -204,9 +180,6 @@ export function sanitizeHtmlContent(html: string): string {
   return tempDiv.innerHTML
 }
 
-/**
- * Validates and sanitizes pasted content
- */
 export function validatePastedContent(content: string): {
   isValid: boolean
   sanitized: string
@@ -217,7 +190,6 @@ export function validatePastedContent(content: string): {
   }
 
   if (content.length > 1000000) {
-    // 1MB text limit
     return {
       isValid: false,
       sanitized: '',
@@ -226,9 +198,9 @@ export function validatePastedContent(content: string): {
   }
 
   const sanitized = content
-    .replace(/\r\n/g, '\n') // normalize newlines
-    .replace(/\u0000/g, '') // remove null chars
-    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '') // strip other control chars
+    .replace(/\r\n/g, '\n')
+    .replace(/\u0000/g, '')
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
 
   return { isValid: true, sanitized }
 }

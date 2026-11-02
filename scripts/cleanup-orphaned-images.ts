@@ -14,13 +14,11 @@ async function cleanupOrphanedImages(): Promise<void> {
       return
     }
 
-    // Get all image files from filesystem
     const files = await readdir(uploadsDir)
     const imageFiles = files.filter((file) => /\.(png|jpg|jpeg|webp|gif)$/i.test(file))
 
     console.log(`📊 Found ${imageFiles.length} image files on disk`)
 
-    // Get all image records from database
     const dbImages = await prisma.image.findMany({
       select: { path: true },
     })
@@ -28,7 +26,6 @@ async function cleanupOrphanedImages(): Promise<void> {
     const dbImagePaths = new Set(dbImages.map((img) => img.path))
     console.log(`📊 Found ${dbImages.length} image records in database`)
 
-    // Find orphaned files (on disk but not in database)
     const orphanedFiles: string[] = []
     const missingFiles: string[] = []
     let totalSize = 0
@@ -42,7 +39,6 @@ async function cleanupOrphanedImages(): Promise<void> {
       }
     }
 
-    // Find missing files (in database but not on disk)
     for (const dbImage of dbImages) {
       const filePath = path.join(uploadsDir, dbImage.path)
       if (!existsSync(filePath)) {
@@ -58,7 +54,6 @@ async function cleanupOrphanedImages(): Promise<void> {
       return
     }
 
-    // List orphaned files
     if (orphanedFiles.length > 0) {
       console.log("\n🗑️  Orphaned files to be deleted:")
       for (const file of orphanedFiles) {
@@ -66,7 +61,6 @@ async function cleanupOrphanedImages(): Promise<void> {
       }
     }
 
-    // List missing files
     if (missingFiles.length > 0) {
       console.log("\n❌ Missing files (database records will be cleaned up):")
       for (const file of missingFiles) {
@@ -74,12 +68,10 @@ async function cleanupOrphanedImages(): Promise<void> {
       }
     }
 
-    // Confirm before proceeding
     console.log("\n⚠️  This will permanently delete orphaned files and clean up missing file records.")
     console.log("Press Ctrl+C to cancel, or wait 5 seconds to continue...")
     await new Promise((resolve) => setTimeout(resolve, 5000))
 
-    // Delete orphaned files
     let deletedFiles = 0
     for (const file of orphanedFiles) {
       try {
@@ -92,7 +84,6 @@ async function cleanupOrphanedImages(): Promise<void> {
       }
     }
 
-    // Clean up missing file records
     let cleanedRecords = 0
     for (const file of missingFiles) {
       try {
@@ -118,7 +109,6 @@ async function cleanupOrphanedImages(): Promise<void> {
   }
 }
 
-// Run cleanup if called directly
 if (require.main === module) {
   cleanupOrphanedImages()
 }

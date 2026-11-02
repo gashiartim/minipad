@@ -36,24 +36,20 @@ async function restoreBackup(backupFilename: string): Promise<void> {
       throw new Error(`Backup file not found: ${backupPath}`)
     }
 
-    // Read backup file
     const backupContent = await readFile(backupPath, "utf-8")
     const backupData: BackupData = JSON.parse(backupContent)
 
     console.log(`📅 Backup created: ${backupData.timestamp}`)
     console.log(`📊 Contains ${backupData.notes.length} notes and ${backupData.images.length} images`)
 
-    // Confirm before proceeding
     console.log("⚠️  This will DELETE all existing data and replace it with backup data.")
     console.log("Press Ctrl+C to cancel, or wait 5 seconds to continue...")
     await new Promise((resolve) => setTimeout(resolve, 5000))
 
-    // Clear existing data
     console.log("🗑️  Clearing existing data...")
     await prisma.image.deleteMany()
     await prisma.note.deleteMany()
 
-    // Restore notes
     console.log("📝 Restoring notes...")
     for (const note of backupData.notes) {
       await prisma.note.create({
@@ -68,7 +64,6 @@ async function restoreBackup(backupFilename: string): Promise<void> {
       })
     }
 
-    // Restore images
     console.log("🖼️  Restoring images...")
     for (const image of backupData.images) {
       await prisma.image.create({
@@ -95,7 +90,6 @@ async function restoreBackup(backupFilename: string): Promise<void> {
   }
 }
 
-// Run restore if called directly
 if (require.main === module) {
   const backupFilename = process.argv[2]
   if (!backupFilename) {

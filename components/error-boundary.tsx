@@ -37,10 +37,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       errorInfo,
     })
 
-    // Log error to console for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo)
 
-    // Call optional error handler
     this.props.onError?.(error, errorInfo)
   }
 
@@ -95,15 +93,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 }
 
-// Hook version for functional components
 export function useErrorHandler() {
   return (error: Error, errorInfo?: React.ErrorInfo) => {
     console.error('Error caught by useErrorHandler:', error, errorInfo)
-    // You could integrate with error reporting service here
   }
 }
 
-// Specific error boundary for image operations
 export function ImageErrorBoundary({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary
