@@ -36,9 +36,8 @@ import {
   uploadImageFromPaste,
   copyImageToClipboard,
   downloadImage,
-  createEnhancedImageExtension,
-  createPasteExtension,
-} from './rich-text-editor.utils'
+} from './image-actions'
+import { createEnhancedImageExtension, createPasteExtension } from './extensions'
 import { ErrorBoundary } from '@/components/error-boundary'
 
 import { lowlight, loadLanguage, LANGUAGE_OPTIONS } from '@/lib/syntax-highlighting'

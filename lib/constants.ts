@@ -1,3 +1,5 @@
+import { MAX_IMAGE_SIZE_MB } from './image-rules'
+
 export const TIMING = {
   AUTOSAVE_DELAY: 1500,
   SYNC_ANIMATION_DURATION: 500,
@@ -7,30 +9,8 @@ export const TIMING = {
   DEBOUNCE_RESIZE_DELAY: 100,
 } as const
 
-export const IMAGE_VALIDATION = {
-  MAX_FILE_SIZE: 10 * 1024 * 1024,
-  MIN_DIMENSIONS: { width: 1, height: 1 },
-  MAX_DIMENSIONS: { width: 4000, height: 4000 },
-  ALLOWED_MIME_TYPES: [
-    'image/jpeg',
-    'image/jpg', 
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml'
-  ],
-  ALLOWED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'],
-} as const
-
-export const FILE_SIGNATURES = {
-  'image/jpeg': [0xFF, 0xD8, 0xFF],
-  'image/png': [0x89, 0x50, 0x4E, 0x47],
-  'image/gif': [0x47, 0x49, 0x46, 0x38],
-  'image/webp': [0x52, 0x49, 0x46, 0x46],
-} as const
-
 export const ERROR_MESSAGES = {
-  FILE_TOO_LARGE: 'File size exceeds 10MB limit',
+  FILE_TOO_LARGE: `File size exceeds ${MAX_IMAGE_SIZE_MB}MB limit`,
   INVALID_FILE_TYPE: 'Invalid file type. Only images are allowed.',
   INVALID_DIMENSIONS: 'Image dimensions are invalid',
   UPLOAD_FAILED: 'Failed to upload image',

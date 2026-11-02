@@ -3,16 +3,17 @@ interface RateLimitEntry {
   resetTime: number
 }
 
-class InMemoryRateLimiter {
+export class InMemoryRateLimiter {
   private store = new Map<string, RateLimitEntry>()
-  private readonly maxRequests: number
-  private readonly windowMs: number
+  readonly maxRequests: number
+  readonly windowMs: number
 
   constructor(maxRequests = 60, windowMs: number = 5 * 60 * 1000) {
     this.maxRequests = maxRequests
     this.windowMs = windowMs
 
-    setInterval(() => this.cleanup(), 60 * 1000)
+    const timer = setInterval(() => this.cleanup(), 60 * 1000)
+    timer.unref?.()
   }
 
   private cleanup(): void {
@@ -77,21 +78,3 @@ class InMemoryRateLimiter {
 }
 
 export const writeRateLimiter = new InMemoryRateLimiter(60, 5 * 60 * 1000)
-
-class NoteMutex {
-  private locks = new Set<string>()
-
-  async acquire(slug: string): Promise<() => void> {
-    while (this.locks.has(slug)) {
-      await new Promise((resolve) => setTimeout(resolve, 10))
-    }
-
-    this.locks.add(slug)
-
-    return () => {
-      this.locks.delete(slug)
-    }
-  }
-}
-
-export const noteMutex = new NoteMutex()

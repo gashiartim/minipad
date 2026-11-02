@@ -1,4 +1,4 @@
-import { writeRateLimiter, noteMutex } from "@/lib/rate-limiter"
+import { writeRateLimiter } from "@/lib/rate-limiter"
 import { jest } from "@jest/globals"
 
 describe("Rate Limiter", () => {
@@ -54,35 +54,5 @@ describe("Rate Limiter", () => {
     expect(writeRateLimiter.checkLimit(mockRequest1).allowed).toBe(false)
 
     expect(writeRateLimiter.checkLimit(mockRequest2).allowed).toBe(true)
-  })
-})
-
-describe("Note Mutex", () => {
-  it("should allow acquiring lock for different slugs", async () => {
-    const release1 = await noteMutex.acquire("slug1")
-    const release2 = await noteMutex.acquire("slug2")
-
-    expect(typeof release1).toBe("function")
-    expect(typeof release2).toBe("function")
-
-    release1()
-    release2()
-  })
-
-  it("should block concurrent access to same slug", async () => {
-    let acquired = false
-    const release1 = await noteMutex.acquire("test-slug")
-
-    const promise = noteMutex.acquire("test-slug").then(() => {
-      acquired = true
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    expect(acquired).toBe(false)
-
-    release1()
-
-    await promise
-    expect(acquired).toBe(true)
   })
 })

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import { getSocket } from "@/lib/socket-client"
 import { TIMING } from "@/lib/constants"
 
-interface RealtimeNoteUpdate {
+export interface RealtimeNoteUpdate {
   type: "content_update" | "connected" | "heartbeat"
   content?: string
   contentRich?: string

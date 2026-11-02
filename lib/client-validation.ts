@@ -1,4 +1,11 @@
-import { IMAGE_VALIDATION, FILE_SIGNATURES, ERROR_MESSAGES } from './constants'
+import { ERROR_MESSAGES } from './constants'
+import {
+  MAX_IMAGE_SIZE_BYTES,
+  IMAGE_DIMENSION_LIMITS,
+  IMAGE_FILE_SIGNATURES,
+  isAllowedImageMime,
+  isAllowedImageExtension,
+} from './image-rules'
 
 export interface ValidationResult {
   isValid: boolean
@@ -11,7 +18,7 @@ export interface ImageValidationResult extends ValidationResult {
 }
 
 export function validateFileSize(file: File): ValidationResult {
-  if (file.size > IMAGE_VALIDATION.MAX_FILE_SIZE) {
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
     return {
       isValid: false,
       error: ERROR_MESSAGES.FILE_TOO_LARGE,
@@ -21,27 +28,7 @@ export function validateFileSize(file: File): ValidationResult {
 }
 
 export function validateFileType(file: File): ValidationResult {
-  const mimeType = file.type.toLowerCase()
-  const extension = file.name
-    .toLowerCase()
-    .substring(file.name.lastIndexOf('.'))
-
-  if (
-    !IMAGE_VALIDATION.ALLOWED_MIME_TYPES.includes(
-      mimeType as (typeof IMAGE_VALIDATION.ALLOWED_MIME_TYPES)[number]
-    )
-  ) {
-    return {
-      isValid: false,
-      error: ERROR_MESSAGES.INVALID_FILE_TYPE,
-    }
-  }
-
-  if (
-    !IMAGE_VALIDATION.ALLOWED_EXTENSIONS.includes(
-      extension as (typeof IMAGE_VALIDATION.ALLOWED_EXTENSIONS)[number]
-    )
-  ) {
+  if (!isAllowedImageMime(file.type) || !isAllowedImageExtension(file.name)) {
     return {
       isValid: false,
       error: ERROR_MESSAGES.INVALID_FILE_TYPE,
@@ -66,14 +53,13 @@ export async function validateFileSignature(
         }
 
         const bytes = new Uint8Array(buffer.slice(0, 12))
-        const mimeType = file.type.toLowerCase() as keyof typeof FILE_SIGNATURES
+        const signature = IMAGE_FILE_SIGNATURES[file.type.toLowerCase()]
 
-        if (!FILE_SIGNATURES[mimeType]) {
+        if (!signature) {
           resolve(validateFileType(file))
           return
         }
 
-        const signature = FILE_SIGNATURES[mimeType]
         const isValid = signature.every((byte, index) => bytes[index] === byte)
 
         if (!isValid) {
@@ -114,13 +100,13 @@ export async function validateImageDimensions(
       URL.revokeObjectURL(url)
 
       const { width, height } = img
-      const { MIN_DIMENSIONS, MAX_DIMENSIONS } = IMAGE_VALIDATION
+      const { min, max } = IMAGE_DIMENSION_LIMITS
 
       if (
-        width < MIN_DIMENSIONS.width ||
-        height < MIN_DIMENSIONS.height ||
-        width > MAX_DIMENSIONS.width ||
-        height > MAX_DIMENSIONS.height
+        width < min.width ||
+        height < min.height ||
+        width > max.width ||
+        height > max.height
       ) {
         resolve({
           isValid: false,

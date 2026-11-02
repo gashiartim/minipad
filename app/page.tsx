@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { notesApi } from "@/lib/api-client"
 
 export default function HomePage() {
   const [slug, setSlug] = useState("")
@@ -47,21 +48,15 @@ export default function HomePage() {
   const handleCreate = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: slug.trim() || undefined,
-          secret: secret.trim() || undefined,
-        }),
+      const result = await notesApi.create({
+        slug: slug.trim() || undefined,
+        secret: secret.trim() || undefined,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
+      if (!result.ok) {
         toast({
           title: "Error",
-          description: data.error || "Failed to create note",
+          description: result.error,
           variant: "destructive",
         })
         return
@@ -72,13 +67,7 @@ export default function HomePage() {
         description: "Note created successfully",
       })
 
-      router.push(`/${data.slug}`)
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to create note",
-        variant: "destructive",
-      })
+      router.push(`/${result.data.slug}`)
     } finally {
       setIsLoading(false)
     }

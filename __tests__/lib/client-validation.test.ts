@@ -1,4 +1,4 @@
-import { validatePastedContent } from '@/lib/validation'
+import { validatePastedContent } from '@/lib/client-validation'
 
 describe('validatePastedContent', () => {
   it('returns original content when it contains angle brackets', () => {
