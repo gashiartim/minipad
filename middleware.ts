@@ -2,6 +2,12 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
+  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(":")[0]
+  if (host === "www.minipad.app") {
+    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, "https://minipad.app")
+    return NextResponse.redirect(url, 301)
+  }
+
   const response = NextResponse.next()
 
   response.headers.set("X-Content-Type-Options", "nosniff")
