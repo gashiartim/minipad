@@ -1,63 +1,17 @@
-import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/db"
-import { createNoteSchema, generateSlug } from "@/lib/validators"
-import {
-  createErrorResponse,
-  createSuccessResponse,
-  validateRequestSize,
-  checkRateLimit,
-  logRequest,
-  logError,
-} from "@/lib/api-middleware"
+import { createNoteSchema } from "@/lib/validators"
+import { apiError, createSuccessResponse, withApi, DEFAULT_MAX_BODY_BYTES } from "@/lib/api-middleware"
+import { serviceErrorResponse } from "@/lib/api/service-error"
+import { noteService } from "@/lib/notes/note-service"
 
-export async function POST(request: NextRequest) {
-  const startTime = Date.now()
+export const POST = withApi(
+  async (request) => {
+    const validation = createNoteSchema.safeParse(await request.json())
+    if (!validation.success) return apiError("VALIDATION_ERROR")
 
-  try {
-    const rateLimitResult = checkRateLimit(request)
-    if (!rateLimitResult.allowed) {
-      logRequest(request, 429, startTime)
-      return rateLimitResult.response!
-    }
+    const result = await noteService.createNote(validation.data)
+    if (!result.ok) return serviceErrorResponse(result.error)
 
-    if (!validateRequestSize(request)) {
-      logRequest(request, 413, startTime)
-      return createErrorResponse("Request too large", "REQUEST_TOO_LARGE", 413)
-    }
-
-    const body = await request.json()
-    const validation = createNoteSchema.safeParse(body)
-
-    if (!validation.success) {
-      logRequest(request, 400, startTime)
-      return createErrorResponse("Invalid request data", "VALIDATION_ERROR", 400)
-    }
-
-    const { slug: providedSlug, content, secret } = validation.data
-    const slug = providedSlug || generateSlug()
-
-    const existingNote = await prisma.note.findUnique({
-      where: { slug },
-    })
-
-    if (existingNote) {
-      logRequest(request, 409, startTime)
-      return createErrorResponse("Slug already exists", "SLUG_EXISTS", 409)
-    }
-
-    const note = await prisma.note.create({
-      data: {
-        slug,
-        content: content || "",
-        secret: secret || null,
-      },
-    })
-
-    logRequest(request, 200, startTime)
-    return createSuccessResponse({ slug: note.slug })
-  } catch (error) {
-    logError(error, "POST /api/notes")
-    logRequest(request, 500, startTime)
-    return createErrorResponse("Internal server error", "INTERNAL_ERROR", 500)
-  }
-}
+    return createSuccessResponse(result.value)
+  },
+  { rateLimit: true, maxBodyBytes: DEFAULT_MAX_BODY_BYTES }
+)

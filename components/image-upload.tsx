@@ -8,21 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Upload, FileImage, AlertCircle } from "lucide-react"
-
-interface UploadedImagePayload {
-  id: string
-  path: string
-  mime: string
-  width: number | null
-  height: number | null
-  sizeBytes: number
-  createdAt: string
-}
+import { notesApi, type NoteImageDto } from "@/lib/api-client"
+import { IMAGE_ACCEPT_ATTRIBUTE, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB, isAllowedImageMime } from "@/lib/image-rules"
 
 interface ImageUploadProps {
   slug: string
   secret: string
-  onImageUploaded: (image: UploadedImagePayload) => void
+  onImageUploaded: (image: NoteImageDto) => void
 }
 
 export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps) {
@@ -42,8 +34,7 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
   }
 
   const uploadFile = async (file: File) => {
-    const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"]
-    if (!allowedTypes.includes(file.type)) {
+    if (!isAllowedImageMime(file.type)) {
       toast({
         title: "Invalid file type",
         description: "Please upload PNG, JPEG, WebP, or GIF images only",
@@ -52,10 +43,10 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
       toast({
         title: "File too large", 
-        description: "Please upload images smaller than 10MB",
+        description: `Please upload images smaller than ${MAX_IMAGE_SIZE_MB}MB`,
         variant: "destructive",
       })
       return
@@ -73,62 +64,30 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
     setIsUploading(true)
     setUploadProgress(0)
 
+    const progressInterval = setInterval(() => {
+      setUploadProgress((prev) => Math.min(prev + Math.random() * 30, 90))
+    }, 200)
+
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      if (secret) {
-        formData.append("secret", secret)
-      }
-
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => Math.min(prev + Math.random() * 30, 90))
-      }, 200)
-
-      const response = await fetch(`/api/notes/${slug}/images`, {
-        method: "POST",
-        body: formData,
-      })
-
-      clearInterval(progressInterval)
+      const result = await notesApi.uploadImage(slug, file, secret)
       setUploadProgress(100)
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        let description = "Failed to upload image"
-        
-        if (response.status === 403) {
-          description = "Access denied - check your secret"
-        } else if (response.status === 413) {
-          description = "File too large"
-        } else if (response.status === 415) {
-          description = "Invalid file type"
-        } else if (response.status === 429) {
-          description = "Too many requests - please wait"
-        } else if (data.error) {
-          description = data.error
-        }
-        
+      if (!result.ok) {
         toast({
           title: "Upload failed",
-          description,
+          description: result.error,
           variant: "destructive",
         })
         return
       }
 
-      onImageUploaded(data)
+      onImageUploaded(result.data)
       toast({
         title: "Success",
         description: "Image uploaded successfully",
       })
-    } catch {
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload image",
-        variant: "destructive",
-      })
     } finally {
+      clearInterval(progressInterval)
       setIsUploading(false)
       setUploadProgress(0)
     }
@@ -198,7 +157,7 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
               </Button>
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="h-3 w-3" />
-                <span>PNG, JPEG, WebP, GIF • Max 10MB</span>
+                <span>PNG, JPEG, WebP, GIF • Max {MAX_IMAGE_SIZE_MB}MB</span>
               </div>
             </div>
           )}
@@ -207,7 +166,7 @@ export function ImageUpload({ slug, secret, onImageUploaded }: ImageUploadProps)
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
+          accept={IMAGE_ACCEPT_ATTRIBUTE}
           onChange={(e) => handleFileSelect(e.target.files)}
           className="hidden"
         />

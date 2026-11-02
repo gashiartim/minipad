@@ -2,6 +2,10 @@ const { createServer } = require('http')
 const { parse } = require('url')
 const next = require('next')
 const { Server } = require('socket.io')
+const { PrismaClient } = require('@prisma/client')
+
+const SLUG_PATTERN = /^[a-zA-Z0-9_-]{3,64}$/
+const prisma = new PrismaClient()
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = 'localhost'
@@ -34,9 +38,28 @@ app.prepare().then(() => {
   io.on('connection', (socket) => {
     console.log('Socket connected:', socket.id)
 
-    socket.on('join-note', (slug) => {
-      console.log(`Socket ${socket.id} joined note: ${slug}`)
-      socket.join(`note:${slug}`)
+    socket.on('join-note', async (payload) => {
+      const slug = payload && typeof payload === 'object' ? payload.slug : undefined
+      const secret = payload && typeof payload === 'object' ? payload.secret : undefined
+
+      if (typeof slug !== 'string' || !SLUG_PATTERN.test(slug)) return
+
+      try {
+        const note = await prisma.note.findUnique({
+          where: { slug },
+          select: { secret: true },
+        })
+
+        if (!note || (note.secret && note.secret !== secret)) {
+          socket.emit('join-error', { slug, code: note ? 'FORBIDDEN' : 'NOT_FOUND' })
+          return
+        }
+
+        console.log(`Socket ${socket.id} joined note: ${slug}`)
+        socket.join(`note:${slug}`)
+      } catch (err) {
+        console.error('join-note failed', slug, err)
+      }
     })
 
     socket.on('leave-note', (slug) => {

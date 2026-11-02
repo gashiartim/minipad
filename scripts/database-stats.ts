@@ -38,7 +38,8 @@ async function getDatabaseStats(): Promise<void> {
           const filePath = path.join(uploadsDir, file)
           const stats = await stat(filePath)
           diskUsage += stats.size
-        } catch (error) {
+        } catch {
+          continue
         }
       }
     }

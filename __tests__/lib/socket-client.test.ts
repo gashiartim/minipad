@@ -1,11 +1,20 @@
 import { getSocket, resetSocketClient } from "@/lib/socket-client"
-import { io } from "socket.io-client"
+import { io, type Socket } from "socket.io-client"
+
+interface MockSocket {
+  connected: boolean
+  id: string
+  on: jest.Mock
+  off: jest.Mock
+  emit: jest.Mock
+  disconnect: jest.Mock
+}
 
 jest.mock("socket.io-client")
 const mockIo = io as jest.MockedFunction<typeof io>
 
 describe("Socket.IO client utilities", () => {
-  let mockSocket: any
+  let mockSocket: MockSocket
 
   beforeEach(() => {
     resetSocketClient()
@@ -20,7 +29,7 @@ describe("Socket.IO client utilities", () => {
       id: "mock-socket-id"
     }
 
-    mockIo.mockReturnValue(mockSocket)
+    mockIo.mockReturnValue(mockSocket as unknown as Socket)
   })
 
   afterEach(() => {

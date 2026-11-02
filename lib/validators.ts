@@ -1,4 +1,10 @@
 import { z } from 'zod'
+import {
+  MAX_IMAGE_SIZE_BYTES,
+  isAllowedImageMime,
+} from './image-rules'
+
+export { isValidImageFilename } from './image-rules'
 
 export const slugSchema = z
   .string()
@@ -36,27 +42,11 @@ export const imageUploadSchema = z.object({
     typeof File !== 'undefined'
       ? z
           .instanceof(File)
-          .refine(
-            (file) =>
-              allowedImageTypes.includes(file.type as AllowedImageMime),
-            'Invalid file type'
-          )
-          .refine((file) => file.size <= maxImageSize, 'File too large')
+          .refine((file) => isAllowedImageMime(file.type), 'Invalid file type')
+          .refine((file) => file.size <= MAX_IMAGE_SIZE_BYTES, 'File too large')
           .refine((file) => file.size > 0, 'File is empty')
       : z.any(),
 })
-
-export const allowedImageTypes = [
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-  'image/webp',
-  'image/gif',
-] as const
-
-export type AllowedImageMime = (typeof allowedImageTypes)[number]
-
-export const maxImageSize = 10 * 1024 * 1024
 
 export function generateSlug(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -95,11 +85,6 @@ export function sanitizeInput(input: string): string {
   return input
     .replace(/<[^>]*>/g, '')
     .trim()
-}
-
-export function isValidImageFilename(filename: string): boolean {
-  const filenameRegex = /^[a-f0-9]{16}-[a-z0-9]{4}\.(png|jpg|jpeg|webp|gif)$/i
-  return filenameRegex.test(filename) && !filename.includes('..')
 }
 
 export function sanitizeFilename(filename: string): string {
